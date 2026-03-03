@@ -1,0 +1,108 @@
+package com.example.notiflogger
+
+import android.app.Service
+import android.content.Intent
+import android.os.IBinder
+import android.os.PowerManager
+import androidx.work.*
+import kotlinx.coroutines.*
+import java.util.concurrent.TimeUnit
+
+class HeartbeatService : Service() {
+    
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private lateinit var powerManager: PowerManager
+    private lateinit var wakeLock: PowerManager.WakeLock
+    
+    override fun onCreate() {
+        super.onCreate()
+        powerManager = getSystemService(PowerManager::class.java)
+        wakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "NotifyLog:HeartbeatWakeLock"
+        )
+        
+        startHeartbeat()
+        scheduleWorkManager()
+    }
+    
+    private fun startHeartbeat() {
+        serviceScope.launch {
+            while (isActive) {
+                // Acquire wake lock
+                if (!wakeLock.isHeld) {
+                    wakeLock.acquire(10000) // 10 seconds
+                }
+                
+                // Check if main process is alive
+                checkMainProcess()
+                
+                // Release after work
+                if (wakeLock.isHeld) {
+                    wakeLock.release()
+                }
+                
+                // Wait before next heartbeat
+                delay(60000) // 1 minute
+            }
+        }
+    }
+    
+    private fun checkMainProcess() {
+        // This keeps the process alive
+        val intent = Intent(this, KeepAliveService::class.java)
+        startService(intent)
+    }
+    
+    private fun scheduleWorkManager() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
+            .setRequiresBatteryNotLow(false)
+            .setRequiresCharging(false)
+            .build()
+        
+        val workRequest = PeriodicWorkRequestBuilder<HeartbeatWorker>(
+            15, TimeUnit.MINUTES
+        ).setConstraints(constraints)
+         .setBackoffCriteria(
+             BackoffPolicy.EXPONENTIAL,
+             1, TimeUnit.MINUTES
+         )
+         .build()
+        
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "heartbeat_work",
+            ExistingPeriodicWorkPolicy.KEEP,
+            workRequest
+        )
+    }
+    
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        return START_STICKY
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.cancel()
+        
+        // Restart
+        val intent = Intent(this, HeartbeatService::class.java)
+        startService(intent)
+    }
+    
+    override fun onBind(intent: Intent?): IBinder? = null
+    
+    class HeartbeatWorker(context: Context, params: WorkerParameters) : 
+        Worker(context, params) {
+        
+        override fun doWork(): Result {
+            return try {
+                val intent = Intent(context, HeartbeatService::class.java)
+                context.startService(intent)
+                Result.success()
+            } catch (e: Exception) {
+                Result.retry()
+            }
+        }
+    }
+}
