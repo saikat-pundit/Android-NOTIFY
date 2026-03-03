@@ -14,9 +14,65 @@ class NotificationService : NotificationListenerService() {
     private lateinit var dbHelper: DatabaseHelper
 
     override fun onCreate() {
-        super.onCreate()
-        dbHelper = DatabaseHelper(this)
+    super.onCreate()
+    dbHelper = DatabaseHelper(this)
+    
+    // Start as foreground service
+    startForegroundService()
+    
+    // Start keep alive services
+    startKeepAliveServices()
+}
+
+private fun startForegroundService() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+            "notification_service",
+            "Notification Service",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Main notification logging service"
+        }
+        
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(channel)
+        
+        val notification = Notification.Builder(this, "notification_service")
+            .setContentTitle("Notify Log Active")
+            .setContentText("Monitoring notifications")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setOngoing(true)
+            .build()
+        
+        startForeground(1001, notification)
     }
+}
+
+private fun startKeepAliveServices() {
+    // Start keep alive service
+    val keepAliveIntent = Intent(this, KeepAliveService::class.java)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        startForegroundService(keepAliveIntent)
+    } else {
+        startService(keepAliveIntent)
+    }
+    
+    // Start heartbeat service
+    val heartbeatIntent = Intent(this, HeartbeatService::class.java)
+    startService(heartbeatIntent)
+}
+
+override fun onDestroy() {
+    super.onDestroy()
+    
+    // Restart service if destroyed
+    val intent = Intent(this, NotificationService::class.java)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        startForegroundService(intent)
+    } else {
+        startService(intent)
+    }
+}
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         val packageName = sbn?.packageName ?: return
