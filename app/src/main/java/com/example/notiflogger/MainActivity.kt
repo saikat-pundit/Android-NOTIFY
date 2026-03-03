@@ -136,17 +136,101 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkPermissions() {
-        if (!NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)) {
-            startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
-        }
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = Uri.parse("package:$packageName")
-            }
-            startActivity(intent)
+    val permissionManager = PermissionManager(this)
+    permissionManager.requestAllPermissions()
+}
+
+// Add this inner class or create new file
+class PermissionManager(private val activity: MainActivity) {
+    
+    fun requestAllPermissions() {
+        requestNotificationAccess()
+        requestBatteryOptimization()
+        requestExactAlarms()
+        requestDisplayOverlay()
+        requestNotificationPermission()
+        startAllServices()
+    }
+    
+    private fun requestNotificationAccess() {
+        if (!NotificationManagerCompat.getEnabledListenerPackages(activity)
+                .contains(activity.packageName)) {
+            activity.startActivity(
+                Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
+            )
         }
     }
+    
+    private fun requestBatteryOptimization() {
+        val pm = activity.getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (!pm.isIgnoringBatteryOptimizations(activity.packageName)) {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:${activity.packageName}")
+            }
+            activity.startActivity(intent)
+        }
+    }
+    
+    private fun requestExactAlarms() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if (!alarmManager.canScheduleExactAlarms()) {
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = Uri.parse("package:${activity.packageName}")
+                }
+                activity.startActivity(intent)
+            }
+        }
+    }
+    
+    private fun requestDisplayOverlay() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(activity)) {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                    data = Uri.parse("package:${activity.packageName}")
+                }
+                activity.startActivity(intent)
+            }
+        }
+    }
+    
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (activity.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                activity.requestPermissions(
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    1001
+                )
+            }
+        }
+    }
+    
+    private fun startAllServices() {
+        // Start notification service
+        val notifIntent = Intent(activity, NotificationService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            activity.startForegroundService(notifIntent)
+        } else {
+            activity.startService(notifIntent)
+        }
+        
+        // Start keep alive service
+        val keepAliveIntent = Intent(activity, KeepAliveService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            activity.startForegroundService(keepAliveIntent)
+        } else {
+            activity.startService(keepAliveIntent)
+        }
+        
+        // Start heartbeat service
+        val heartbeatIntent = Intent(activity, HeartbeatService::class.java)
+        activity.startService(heartbeatIntent)
+        
+        // Schedule alarms
+        AlarmScheduler.scheduleAlarms(activity)
+    }
+}
 
     override fun onDestroy() {
         super.onDestroy()
