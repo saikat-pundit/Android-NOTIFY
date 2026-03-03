@@ -82,8 +82,5 @@ dependencies {
     // Multi-dex support
     implementation 'androidx.multidex:multidex:2.0.1'
     
-    // Leak detection (debug only)
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.12'
+    // REMOVED: debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.12'
 }
-
-// REMOVED: apply plugin: 'com.google.gms.google-services'
