@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
@@ -60,7 +61,7 @@ class KeepAliveService : Service() {
     }
     
     private fun acquireWakeLock() {
-        powerManager = getSystemService(PowerManager::class.java)
+        powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
             "NotifyLog:KeepAliveWakeLock"
@@ -74,7 +75,7 @@ class KeepAliveService : Service() {
             while (isActive) {
                 delay(30000) // Check every 30 seconds
                 
-                // Check if main service is running
+                // Check if main service is running - FIXED METHOD
                 if (!isNotificationServiceRunning()) {
                     // Restart notification service
                     val componentName = ComponentName(
@@ -93,9 +94,12 @@ class KeepAliveService : Service() {
     }
     
     private fun isNotificationServiceRunning(): Boolean {
-        val manager = getSystemService(NotificationManager::class.java)
-        val listeners = manager.getEnabledListenerPackages()
-        return listeners.contains(packageName)
+        // FIXED: Correct way to check if notification listener is enabled
+        val enabledListeners = android.provider.Settings.Secure.getString(
+            contentResolver,
+            "enabled_notification_listeners"
+        )
+        return enabledListeners != null && enabledListeners.contains(packageName)
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
