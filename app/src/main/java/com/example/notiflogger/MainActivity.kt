@@ -228,39 +228,57 @@ class PermissionManager(private val activity: MainActivity) {
     
     // NEW: Manufacturer-specific settings
     private fun checkManufacturerSettings() {
-        val manufacturer = Build.MANUFACTURER.lowercase()
-        
-        when {
-            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
-                android.widget.Toast.makeText(
-                    activity,
-                    "XIAOMI DETECTED: Please enable Autostart in Security app",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            }
-            manufacturer.contains("samsung") -> {
-                android.widget.Toast.makeText(
-                    activity,
-                    "SAMSUNG DETECTED: Add app to 'Never sleeping apps' in Battery settings",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            }
-            manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
-                android.widget.Toast.makeText(
-                    activity,
-                    "HUAWEI DETECTED: Add to 'Protected apps' in Battery settings",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            }
-            manufacturer.contains("oppo") || manufacturer.contains("oneplus") || manufacturer.contains("realme") -> {
-                android.widget.Toast.makeText(
-                    activity,
-                    "OPPO/ONEPLUS DETECTED: Enable 'Auto-launch' in App permissions",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            }
+    val manufacturer = Build.MANUFACTURER.lowercase()
+    
+    when {
+        manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
+            android.widget.Toast.makeText(
+                activity,
+                "XIAOMI: Go to Settings → Passwords & security → Privacy → Notification access",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            
+            // Add specific Xiaomi notification help
+            showXiaomiNotificationGuide()
+        }
+        manufacturer.contains("samsung") -> {
+            android.widget.Toast.makeText(
+                activity,
+                "SAMSUNG: Settings → Notifications → Notification access",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+        manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
+            android.widget.Toast.makeText(
+                activity,
+                "HUAWEI: Settings → Apps → Apps → Notify Log → Notification access",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+        manufacturer.contains("oppo") || manufacturer.contains("oneplus") || manufacturer.contains("realme") -> {
+            android.widget.Toast.makeText(
+                activity,
+                "OPPO: Settings → Notifications & status bar → Notification access",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
         }
     }
+}
+
+// ADD THIS NEW METHOD
+private fun showXiaomiNotificationGuide() {
+    android.app.AlertDialog.Builder(this)
+        .setTitle("Xiaomi Special Instructions")
+        .setMessage("On Xiaomi phones:\n\n" +
+                   "1. Go to Settings\n" +
+                   "2. Passwords & security\n" +
+                   "3. Privacy\n" +
+                   "4. Notification access\n" +
+                   "5. Find 'Notify Log' and enable\n\n" +
+                   "If it shows 'Security risk' warning, ignore and enable anyway.")
+        .setPositiveButton("OK", null)
+        .show()
+}
     
     private fun startAllServices() {
         // Start notification service
