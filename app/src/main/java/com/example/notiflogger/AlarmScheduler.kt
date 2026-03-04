@@ -6,28 +6,42 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.SystemClock
+import java.util.Random
 
 object AlarmScheduler {
     
+    private val random = Random()
+    
     fun scheduleAlarms(context: Context) {
-        scheduleExactAlarm(context)
-        scheduleInexactAlarm(context)
-        scheduleAlarmWithAllowWhileIdle(context)
+        // Schedule 4 alarms with different intervals
+        // This prevents hitting Android's alarm limits
+        scheduleAlarmWithInterval(context, 1001, 14)  // 14 minutes
+        scheduleAlarmWithInterval(context, 1002, 17)  // 17 minutes  
+        scheduleAlarmWithInterval(context, 1003, 21)  // 21 minutes
+        scheduleAlarmWithInterval(context, 1004, 25)  // 25 minutes
+        
+        // Also schedule a repeating inexact alarm (system optimized)
+        scheduleInexactRepeating(context)
     }
     
-    private fun scheduleExactAlarm(context: Context) {
+    private fun scheduleAlarmWithInterval(context: Context, requestCode: Int, minutes: Int) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java)
+        
+        // Add random offset to prevent pattern detection
+        val randomOffset = random.nextInt(60) * 1000 // 0-60 seconds
+        
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            1001,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
-        val triggerTime = SystemClock.elapsedRealtime() + 300000 // 5 minutes
+        val triggerTime = SystemClock.elapsedRealtime() + (minutes * 60 * 1000) + randomOffset
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // Use allow while idle for all to bypass Doze
             alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 triggerTime,
@@ -48,52 +62,35 @@ object AlarmScheduler {
         }
     }
     
-    private fun scheduleInexactAlarm(context: Context) {
+    private fun scheduleInexactRepeating(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            1002,
+            2001, // Different range to distinguish
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
         alarmManager.setInexactRepeating(
             AlarmManager.ELAPSED_REALTIME_WAKEUP,
-            SystemClock.elapsedRealtime() + 600000, // 10 minutes
-            600000, // 10 minutes
+            SystemClock.elapsedRealtime() + 30 * 60 * 1000, // 30 minutes
+            30 * 60 * 1000, // 30 minutes
             pendingIntent
         )
     }
     
-    private fun scheduleAlarmWithAllowWhileIdle(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            val intent = Intent(context, AlarmReceiver::class.java)
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                1003,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            
-            alarmManager.setAndAllowWhileIdle(
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + 900000, // 15 minutes
-                pendingIntent
-            )
-        }
-    }
-    
     fun scheduleNextAlarm(context: Context) {
-        scheduleExactAlarm(context)
+        // Reschedule all alarms
+        scheduleAlarms(context)
     }
     
     fun cancelAlarms(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java)
         
-        for (requestCode in 1001..1003) {
+        // Cancel all alarms (1001-1004 and 2001)
+        for (requestCode in 1001..1004) {
             val pendingIntent = PendingIntent.getBroadcast(
                 context,
                 requestCode,
@@ -103,5 +100,14 @@ object AlarmScheduler {
             alarmManager.cancel(pendingIntent)
             pendingIntent.cancel()
         }
+        
+        val repeatingIntent = PendingIntent.getBroadcast(
+            context,
+            2001,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(repeatingIntent)
+        repeatingIntent.cancel()
     }
 }
