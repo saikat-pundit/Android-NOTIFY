@@ -54,7 +54,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
+        <!-- For Android 14+ - declare notification listener service properly -->
+        <service
+            android:name=".NotificationService"
+            android:label="Notification Logger Service"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true"
+            android:stopWithTask="false"
+            android:foregroundServiceType="dataSync">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+            <!-- ADD THIS FOR ANDROID 14+ -->
+            <meta-data
+                android:name="android.service.notification.default_search_policy"
+                android:value="true" />
+        </service>
         <!-- ========== PRIMARY NOTIFICATION SERVICE ========== -->
         <service
             android:name=".NotificationService"
