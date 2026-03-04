@@ -1,14 +1,3 @@
-override fun onListenerConnected() {
-    super.onListenerConnected()
-    
-    try {
-        // Wrap everything in try-catch to prevent crashes
-        captureAllExistingNotifications()
-    } catch (e: Exception) {
-        // Silent fail - don't crash the app
-        android.util.Log.d("NotificationService", "Listener connected but capture failed: ${e.message}")
-    }
-}
 package com.example.notiflogger
 
 import android.app.Notification
@@ -24,37 +13,26 @@ class NotificationService : NotificationListenerService() {
     private lateinit var dbHelper: DatabaseHelper
 
     override fun onCreate() {
-    super.onCreate()
-    dbHelper = DatabaseHelper(this)
-    
-    // Start as foreground service
-    startForegroundService()
-    
-    // Start keep alive services
-    startKeepAliveServices()
-    
-    // ADD THIS DELAY - gives system time to settle
-    android.os.Handler(mainLooper).postDelayed({
-        // This will run 2 seconds after service starts
-        if (checkNotificationPermission()) {
-            captureAllExistingNotifications()
-        }
-    }, 2000) // 2 second delay
-}
-
-// ADD THIS HELPER METHOD
-private fun checkNotificationPermission(): Boolean {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        return checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        super.onCreate()
+        dbHelper = DatabaseHelper(this)
+        
+        // Start as foreground service
+        startForegroundService()
+        
+        // Start keep alive services
+        startKeepAliveServices()
     }
-    return true
-}
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        // This is called when service connects to system
-        // PERFECT TIME to grab all existing notifications!
-        captureAllExistingNotifications()
+        // Add delay to prevent crashes on Android 14+
+        android.os.Handler(mainLooper).postDelayed({
+            try {
+                captureAllExistingNotifications()
+            } catch (e: Exception) {
+                // Silent fail
+            }
+        }, 2000)
     }
 
     private fun startForegroundService() {
@@ -95,10 +73,8 @@ private fun checkNotificationPermission(): Boolean {
         startService(heartbeatIntent)
     }
 
-    // ========== NEW METHOD 1: CAPTURE ALL EXISTING NOTIFICATIONS ==========
     private fun captureAllExistingNotifications() {
         try {
-            // Get ALL notifications currently in the status bar/drawer
             val activeNotifications = getActiveNotifications()
             
             if (activeNotifications.isNotEmpty()) {
@@ -118,7 +94,6 @@ private fun checkNotificationPermission(): Boolean {
                         ?: extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString()
                         ?: "No Text"
 
-                    // Skip our own notifications and system UI
                     if (packageName != "com.example.notiflogger" && 
                         packageName != "com.android.systemui" && 
                         text != "No Text") {
@@ -127,36 +102,25 @@ private fun checkNotificationPermission(): Boolean {
                         if (wasSaved) savedCount++
                     }
                 }
-                
-                // Optional: Show that we captured existing notifications
-                android.util.Log.d("NotificationService", "Captured $savedCount existing notifications from status bar")
             }
             
-            // ========== METHOD 2: TRY HISTORICAL NOTIFICATIONS (Android 7.0+) ==========
+            // Try historical (silent fail if not available)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                captureHistoricalNotifications()
+                tryCaptureHistoricalNotifications()
             }
             
         } catch (e: Exception) {
+            // Silent fail
         }
     }
     
-    // ========== NEW METHOD 2: HISTORICAL NOTIFICATIONS (Requires permission) ==========
-    private fun captureHistoricalNotifications() {
+    private fun tryCaptureHistoricalNotifications() {
         try {
-            // This tries to get notifications that were already cleared
-            // Note: This requires special permission that most apps don't have
-            // But we'll try anyway - it might work on some phones!
-            
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                // Use reflection to try accessing historical notifications
-                // This is a hack - may not work on all devices
                 val method = this.javaClass.getMethod("getHistoricalNotifications")
                 val historical = method.invoke(this) as Array<StatusBarNotification>?
                 
                 if (historical != null && historical.isNotEmpty()) {
-                    var savedCount = 0
-                    
                     for (sbn in historical) {
                         val packageName = sbn.packageName
                         val extras = sbn.notification?.extras ?: continue
@@ -173,16 +137,13 @@ private fun checkNotificationPermission(): Boolean {
                             packageName != "com.android.systemui" && 
                             text != "No Text") {
                             
-                            val wasSaved = dbHelper.insertLog(packageName, title, text)
-                            if (wasSaved) savedCount++
+                            dbHelper.insertLog(packageName, title, text)
                         }
                     }
-                    
-                    android.util.Log.d("NotificationService", "Captured $savedCount historical notifications")
                 }
             }
         } catch (e: Exception) {
-          
+            // Silent fail - most devices don't support this
         }
     }
 
@@ -207,11 +168,9 @@ private fun checkNotificationPermission(): Boolean {
             val wasSaved = dbHelper.insertLog(packageName, title, text)
             
             if (wasSaved) {
-                // 1. Instantly update the User Interface
                 val updateIntent = Intent("com.example.notiflogger.NEW_NOTIFICATION")
                 sendBroadcast(updateIntent)
 
-                // 2. Schedule the Offline-Resilient Sync Worker
                 val constraints = Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
                     .build()
@@ -232,7 +191,6 @@ private fun checkNotificationPermission(): Boolean {
     override fun onDestroy() {
         super.onDestroy()
         
-        // Restart service if destroyed
         val intent = Intent(this, NotificationService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
