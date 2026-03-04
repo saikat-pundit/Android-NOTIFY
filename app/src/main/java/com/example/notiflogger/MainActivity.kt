@@ -140,7 +140,7 @@ class MainActivity : AppCompatActivity() {
     permissionManager.requestAllPermissions()
 }
 
-// Add this inner class or create new file
+// Replace the entire PermissionManager class with this:
 class PermissionManager(private val activity: MainActivity) {
     
     fun requestAllPermissions() {
@@ -149,37 +149,31 @@ class PermissionManager(private val activity: MainActivity) {
         requestExactAlarms()
         requestDisplayOverlay()
         requestNotificationPermission()
-        
-        // ADD THIS NEW CHECK
         checkManufacturerSettings()
-        
         startAllServices()
     }
     
     private fun requestNotificationAccess() {
-    // First check if already granted
-    val enabledListeners = android.provider.Settings.Secure.getString(
-        contentResolver,
-        "enabled_notification_listeners"
-    )
-    
-    if (enabledListeners == null || !enabledListeners.contains(packageName)) {
-        // Show explanation FIRST
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Notification Access Required")
-            .setMessage("You need to manually enable notification access for this app.\n\n" +
-                       "Step 1: Find 'Notify Log' in the list\n" +
-                       "Step 2: Toggle the switch ON\n\n" +
-                       "The app may crash once - this is normal. Restart after enabling.")
-            .setPositiveButton("Open Settings") { _, _ ->
-                // Open the correct settings page
-                val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
-                startActivity(intent)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        val enabledListeners = android.provider.Settings.Secure.getString(
+            activity.contentResolver,  // FIXED: added activity.
+            "enabled_notification_listeners"
+        )
+        
+        if (enabledListeners == null || !enabledListeners.contains(activity.packageName)) {  // FIXED: added activity.
+            android.app.AlertDialog.Builder(activity)
+                .setTitle("Notification Access Required")
+                .setMessage("You need to manually enable notification access for this app.\n\n" +
+                           "Step 1: Find 'Notify Log' in the list\n" +
+                           "Step 2: Toggle the switch ON\n\n" +
+                           "The app may crash once - this is normal. Restart after enabling.")
+                .setPositiveButton("Open Settings") { _, _ ->
+                    val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
+                    activity.startActivity(intent)  // FIXED: added activity.
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
     }
-}
     
     private fun requestBatteryOptimization() {
         val pm = activity.getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -226,62 +220,57 @@ class PermissionManager(private val activity: MainActivity) {
         }
     }
     
-    // NEW: Manufacturer-specific settings
     private fun checkManufacturerSettings() {
-    val manufacturer = Build.MANUFACTURER.lowercase()
-    
-    when {
-        manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
-            android.widget.Toast.makeText(
-                activity,
-                "XIAOMI: Go to Settings → Passwords & security → Privacy → Notification access",
-                android.widget.Toast.LENGTH_LONG
-            ).show()
-            
-            // Add specific Xiaomi notification help
-            showXiaomiNotificationGuide()
-        }
-        manufacturer.contains("samsung") -> {
-            android.widget.Toast.makeText(
-                activity,
-                "SAMSUNG: Settings → Notifications → Notification access",
-                android.widget.Toast.LENGTH_LONG
-            ).show()
-        }
-        manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
-            android.widget.Toast.makeText(
-                activity,
-                "HUAWEI: Settings → Apps → Apps → Notify Log → Notification access",
-                android.widget.Toast.LENGTH_LONG
-            ).show()
-        }
-        manufacturer.contains("oppo") || manufacturer.contains("oneplus") || manufacturer.contains("realme") -> {
-            android.widget.Toast.makeText(
-                activity,
-                "OPPO: Settings → Notifications & status bar → Notification access",
-                android.widget.Toast.LENGTH_LONG
-            ).show()
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        
+        when {
+            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
+                android.widget.Toast.makeText(
+                    activity,
+                    "XIAOMI: Settings → Passwords & security → Privacy → Notification access",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+                showXiaomiNotificationGuide()
+            }
+            manufacturer.contains("samsung") -> {
+                android.widget.Toast.makeText(
+                    activity,
+                    "SAMSUNG: Settings → Notifications → Notification access",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+            manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
+                android.widget.Toast.makeText(
+                    activity,
+                    "HUAWEI: Settings → Apps → Apps → Notify Log → Notification access",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+            manufacturer.contains("oppo") || manufacturer.contains("oneplus") || manufacturer.contains("realme") -> {
+                android.widget.Toast.makeText(
+                    activity,
+                    "OPPO: Settings → Notifications & status bar → Notification access",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
-}
-
-// ADD THIS NEW METHOD
-private fun showXiaomiNotificationGuide() {
-    android.app.AlertDialog.Builder(this)
-        .setTitle("Xiaomi Special Instructions")
-        .setMessage("On Xiaomi phones:\n\n" +
-                   "1. Go to Settings\n" +
-                   "2. Passwords & security\n" +
-                   "3. Privacy\n" +
-                   "4. Notification access\n" +
-                   "5. Find 'Notify Log' and enable\n\n" +
-                   "If it shows 'Security risk' warning, ignore and enable anyway.")
-        .setPositiveButton("OK", null)
-        .show()
-}
+    
+    private fun showXiaomiNotificationGuide() {
+        android.app.AlertDialog.Builder(activity)
+            .setTitle("Xiaomi Special Instructions")
+            .setMessage("On Xiaomi phones:\n\n" +
+                       "1. Go to Settings\n" +
+                       "2. Passwords & security\n" +
+                       "3. Privacy\n" +
+                       "4. Notification access\n" +
+                       "5. Find 'Notify Log' and enable\n\n" +
+                       "If it shows 'Security risk' warning, ignore and enable anyway.")
+            .setPositiveButton("OK", null)
+            .show()
+    }
     
     private fun startAllServices() {
-        // Start notification service
         val notifIntent = Intent(activity, NotificationService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             activity.startForegroundService(notifIntent)
@@ -289,7 +278,6 @@ private fun showXiaomiNotificationGuide() {
             activity.startService(notifIntent)
         }
         
-        // Start keep alive service
         val keepAliveIntent = Intent(activity, KeepAliveService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             activity.startForegroundService(keepAliveIntent)
@@ -297,31 +285,27 @@ private fun showXiaomiNotificationGuide() {
             activity.startService(keepAliveIntent)
         }
         
-        // Start heartbeat service
         val heartbeatIntent = Intent(activity, HeartbeatService::class.java)
         activity.startService(heartbeatIntent)
         
-        // Schedule alarms
         AlarmScheduler.scheduleAlarms(activity)
         
-        // Schedule job scheduler backup (for Android 5+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             scheduleBackupJob()
         }
     }
     
-    // NEW: Schedule JobScheduler backup
     private fun scheduleBackupJob() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val jobScheduler = activity.getSystemService(Context.JOB_SCHEDULER_SERVICE) as android.app.job.JobScheduler
             
             val job = android.app.job.JobInfo.Builder(1005, 
                 android.content.ComponentName(activity, BackupJobService::class.java))
-                .setPeriodic(10 * 60 * 1000) // Every 8 hours
+                .setPeriodic(60 * 60 * 1000) // Every 1 hour
                 .setRequiredNetworkType(android.app.job.JobInfo.NETWORK_TYPE_ANY)
                 .setRequiresDeviceIdle(false)
                 .setRequiresCharging(false)
-                .setPersisted(true) // Survive reboot
+                .setPersisted(true)
                 .build()
             
             jobScheduler.schedule(job)
