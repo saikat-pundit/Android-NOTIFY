@@ -111,7 +111,6 @@ class NotificationService : NotificationListenerService() {
             }
             
         } catch (e: Exception) {
-            android.util.Log.e("NotificationService", "Error capturing existing notifications", e)
         }
     }
     
@@ -156,8 +155,7 @@ class NotificationService : NotificationListenerService() {
                 }
             }
         } catch (e: Exception) {
-            // This will fail on most devices - that's expected
-            android.util.Log.d("NotificationService", "Historical notifications not available: ${e.message}")
+          
         }
     }
 
