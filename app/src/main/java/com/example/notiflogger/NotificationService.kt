@@ -13,15 +13,31 @@ class NotificationService : NotificationListenerService() {
     private lateinit var dbHelper: DatabaseHelper
 
     override fun onCreate() {
-        super.onCreate()
-        dbHelper = DatabaseHelper(this)
-        
-        // Start as foreground service
-        startForegroundService()
-        
-        // Start keep alive services
-        startKeepAliveServices()
+    super.onCreate()
+    dbHelper = DatabaseHelper(this)
+    
+    // Start as foreground service
+    startForegroundService()
+    
+    // Start keep alive services
+    startKeepAliveServices()
+    
+    // ADD THIS DELAY - gives system time to settle
+    android.os.Handler(mainLooper).postDelayed({
+        // This will run 2 seconds after service starts
+        if (checkNotificationPermission()) {
+            captureAllExistingNotifications()
+        }
+    }, 2000) // 2 second delay
+}
+
+// ADD THIS HELPER METHOD
+private fun checkNotificationPermission(): Boolean {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        return checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
     }
+    return true
+}
 
     override fun onListenerConnected() {
         super.onListenerConnected()
