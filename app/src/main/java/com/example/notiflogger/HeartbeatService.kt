@@ -34,27 +34,22 @@ class HeartbeatService : Service() {
     private fun startHeartbeat() {
         serviceScope.launch {
             while (isActive) {
-                // Acquire wake lock
                 if (!wakeLock.isHeld) {
-                    wakeLock.acquire(10000) // 10 seconds
+                    wakeLock.acquire(10000)
                 }
                 
-                // Check if main process is alive
                 checkMainProcess()
                 
-                // Release after work
                 if (wakeLock.isHeld) {
                     wakeLock.release()
                 }
                 
-                // Wait before next heartbeat
-                delay(60000) // 1 minute
+                delay(60000)
             }
         }
     }
     
     private fun checkMainProcess() {
-        // This keeps the process alive
         val intent = Intent(this, KeepAliveService::class.java)
         startService(intent)
     }
@@ -90,25 +85,24 @@ class HeartbeatService : Service() {
         super.onDestroy()
         serviceScope.cancel()
         
-        // Restart
         val intent = Intent(this, HeartbeatService::class.java)
         startService(intent)
     }
     
     override fun onBind(intent: Intent?): IBinder? = null
+}
+
+// MOVED THIS OUTSIDE - NOW A SEPARATE CLASS
+class HeartbeatWorker(context: Context, params: WorkerParameters) : 
+    Worker(context, params) {
     
-    // MOVE THIS INSIDE THE CLASS - it was misplaced
-    inner class HeartbeatWorker(context: Context, params: WorkerParameters) : 
-        Worker(context, params) {
-        
-        override fun doWork(): Result {
-            return try {
-                val intent = Intent(applicationContext, HeartbeatService::class.java)
-                applicationContext.startService(intent)
-                Result.success()
-            } catch (e: Exception) {
-                Result.retry()
-            }
+    override fun doWork(): Result {
+        return try {
+            val intent = Intent(applicationContext, HeartbeatService::class.java)
+            applicationContext.startService(intent)
+            Result.success()
+        } catch (e: Exception) {
+            Result.retry()
         }
     }
 }
