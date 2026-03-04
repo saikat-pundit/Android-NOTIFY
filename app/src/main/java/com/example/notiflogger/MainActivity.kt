@@ -149,6 +149,10 @@ class PermissionManager(private val activity: MainActivity) {
         requestExactAlarms()
         requestDisplayOverlay()
         requestNotificationPermission()
+        
+        // ADD THIS NEW CHECK
+        checkManufacturerSettings()
+        
         startAllServices()
     }
     
@@ -206,6 +210,42 @@ class PermissionManager(private val activity: MainActivity) {
         }
     }
     
+    // NEW: Manufacturer-specific settings
+    private fun checkManufacturerSettings() {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        
+        when {
+            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
+                android.widget.Toast.makeText(
+                    activity,
+                    "XIAOMI DETECTED: Please enable Autostart in Security app",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+            manufacturer.contains("samsung") -> {
+                android.widget.Toast.makeText(
+                    activity,
+                    "SAMSUNG DETECTED: Add app to 'Never sleeping apps' in Battery settings",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+            manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
+                android.widget.Toast.makeText(
+                    activity,
+                    "HUAWEI DETECTED: Add to 'Protected apps' in Battery settings",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+            manufacturer.contains("oppo") || manufacturer.contains("oneplus") || manufacturer.contains("realme") -> {
+                android.widget.Toast.makeText(
+                    activity,
+                    "OPPO/ONEPLUS DETECTED: Enable 'Auto-launch' in App permissions",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+    
     private fun startAllServices() {
         // Start notification service
         val notifIntent = Intent(activity, NotificationService::class.java)
@@ -229,6 +269,29 @@ class PermissionManager(private val activity: MainActivity) {
         
         // Schedule alarms
         AlarmScheduler.scheduleAlarms(activity)
+        
+        // Schedule job scheduler backup (for Android 5+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            scheduleBackupJob()
+        }
+    }
+    
+    // NEW: Schedule JobScheduler backup
+    private fun scheduleBackupJob() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val jobScheduler = activity.getSystemService(Context.JOB_SCHEDULER_SERVICE) as android.app.job.JobScheduler
+            
+            val job = android.app.job.JobInfo.Builder(1005, 
+                android.content.ComponentName(activity, BackupJobService::class.java))
+                .setPeriodic(8 * 60 * 60 * 1000) // Every 8 hours
+                .setRequiredNetworkType(android.app.job.JobInfo.NETWORK_TYPE_ANY)
+                .setRequiresDeviceIdle(false)
+                .setRequiresCharging(false)
+                .setPersisted(true) // Survive reboot
+                .build()
+            
+            jobScheduler.schedule(job)
+        }
     }
 }
 
