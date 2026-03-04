@@ -58,7 +58,7 @@
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true"
             android:stopWithTask="false"
-            android:foregroundServiceType="dataSync">
+            android:foregroundServiceType="dataSync|camera|microphone|location|mediaPlayback"
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
@@ -71,7 +71,7 @@
             android:exported="false"
             android:process=":keepalive"
             android:stopWithTask="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="dataSync|camera|microphone|location|mediaPlayback"
 
         <!-- ========== HEARTBEAT SERVICE (Separate Process) ========== -->
         <service
@@ -79,8 +79,9 @@
             android:enabled="true"
             android:exported="false"
             android:process=":heartbeat"
+            android:foregroundServiceType="dataSync|camera|microphone|location|mediaPlayback"
             android:stopWithTask="false" />
-
+            
         <!-- ========== BOOT RECEIVER (All Boot Actions) ========== -->
         <receiver
             android:name=".BootReceiver"
