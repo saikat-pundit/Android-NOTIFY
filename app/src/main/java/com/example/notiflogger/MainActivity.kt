@@ -157,13 +157,29 @@ class PermissionManager(private val activity: MainActivity) {
     }
     
     private fun requestNotificationAccess() {
-        if (!NotificationManagerCompat.getEnabledListenerPackages(activity)
-                .contains(activity.packageName)) {
-            activity.startActivity(
-                Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
-            )
-        }
+    // First check if already granted
+    val enabledListeners = android.provider.Settings.Secure.getString(
+        contentResolver,
+        "enabled_notification_listeners"
+    )
+    
+    if (enabledListeners == null || !enabledListeners.contains(packageName)) {
+        // Show explanation FIRST
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Notification Access Required")
+            .setMessage("You need to manually enable notification access for this app.\n\n" +
+                       "Step 1: Find 'Notify Log' in the list\n" +
+                       "Step 2: Toggle the switch ON\n\n" +
+                       "The app may crash once - this is normal. Restart after enabling.")
+            .setPositiveButton("Open Settings") { _, _ ->
+                // Open the correct settings page
+                val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
+                startActivity(intent)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
+}
     
     private fun requestBatteryOptimization() {
         val pm = activity.getSystemService(Context.POWER_SERVICE) as PowerManager
