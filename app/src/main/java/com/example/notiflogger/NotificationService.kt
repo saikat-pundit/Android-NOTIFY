@@ -1,3 +1,14 @@
+override fun onListenerConnected() {
+    super.onListenerConnected()
+    
+    try {
+        // Wrap everything in try-catch to prevent crashes
+        captureAllExistingNotifications()
+    } catch (e: Exception) {
+        // Silent fail - don't crash the app
+        android.util.Log.d("NotificationService", "Listener connected but capture failed: ${e.message}")
+    }
+}
 package com.example.notiflogger
 
 import android.app.Notification
