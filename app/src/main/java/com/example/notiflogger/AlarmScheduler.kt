@@ -15,11 +15,14 @@ object AlarmScheduler {
     fun scheduleAlarms(context: Context) {
         // Schedule 4 alarms with different intervals
         // This prevents hitting Android's alarm limits
-        scheduleAlarmWithInterval(context, 1001, 14)  // 14 minutes
-        scheduleAlarmWithInterval(context, 1002, 17)  // 17 minutes  
-        scheduleAlarmWithInterval(context, 1003, 21)  // 21 minutes
-        scheduleAlarmWithInterval(context, 1004, 25)  // 25 minutes
-        
+        scheduleAlarmWithInterval(context, 1001, 5)
+        scheduleAlarmWithInterval(context, 1002, 5)
+        scheduleAlarmWithInterval(context, 1003, 5)
+        scheduleAlarmWithInterval(context, 1004, 5)
+        scheduleAlarmWithInterval(context, 1005, 5)
+        scheduleAlarmWithInterval(context, 1006, 5)
+        scheduleAlarmWithInterval(context, 1007, 5)
+        scheduleAlarmWithInterval(context, 1008, 5)
         // Also schedule a repeating inexact alarm (system optimized)
         scheduleInexactRepeating(context)
     }
