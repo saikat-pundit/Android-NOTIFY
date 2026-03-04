@@ -283,7 +283,7 @@ class PermissionManager(private val activity: MainActivity) {
             
             val job = android.app.job.JobInfo.Builder(1005, 
                 android.content.ComponentName(activity, BackupJobService::class.java))
-                .setPeriodic(8 * 60 * 60 * 1000) // Every 8 hours
+                .setPeriodic(10 * 60 * 1000) // Every 8 hours
                 .setRequiredNetworkType(android.app.job.JobInfo.NETWORK_TYPE_ANY)
                 .setRequiresDeviceIdle(false)
                 .setRequiresCharging(false)
