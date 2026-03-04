@@ -96,6 +96,7 @@
         </receiver>
 
         <!-- ========== COMPREHENSIVE RESTART RECEIVER ========== -->
+                <!-- ========== COMPREHENSIVE RESTART RECEIVER ========== -->
         <receiver
             android:name=".RestartReceiver"
             android:enabled="true"
