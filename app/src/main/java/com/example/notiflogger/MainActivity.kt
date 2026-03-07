@@ -20,7 +20,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationManagerCompat
-
+import okio.Buffer
+import okio.BufferedSink
+import okio.ForwardingSink
+import okio.Okio
+import okio.Sink
 class MainActivity : AppCompatActivity() {
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var logTextView: TextView
@@ -325,5 +329,41 @@ class PermissionManager(private val activity: MainActivity) {
         } else {
             logTextView.text = "Waiting for notifications..."
         }
+    }
+}
+// Paste this at the absolute bottom of the file
+class ProgressRequestBody(
+    private val requestBody: RequestBody,
+    private val onProgressUpdate: (Int) -> Unit
+) : RequestBody() {
+
+    override fun contentType(): MediaType? = requestBody.contentType()
+
+    override fun contentLength(): Long = requestBody.contentLength()
+
+    override fun writeTo(sink: BufferedSink) {
+        var lastProgress = -1
+        val countingSink = object : ForwardingSink(sink) {
+            var bytesWritten = 0L
+            var contentLength = 0L
+
+            override fun write(source: Buffer, byteCount: Long) {
+                super.write(source, byteCount)
+                if (contentLength == 0L) {
+                    contentLength = contentLength()
+                }
+                bytesWritten += byteCount
+                val progress = ((bytesWritten.toFloat() / contentLength.toFloat()) * 100).toInt()
+                
+                // Only update UI if the percentage actually changed to prevent spamming the Main Thread
+                if (progress != lastProgress) {
+                    lastProgress = progress
+                    onProgressUpdate(progress)
+                }
+            }
+        }
+        val bufferedSink = Okio.buffer(countingSink)
+        requestBody.writeTo(bufferedSink)
+        bufferedSink.flush()
     }
 }
