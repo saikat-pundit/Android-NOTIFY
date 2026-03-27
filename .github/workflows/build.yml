@@ -3,6 +3,10 @@ name: Android CI
 on:
   workflow_dispatch:
 
+# NEW: We must grant the workflow permission to create/update releases
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -38,8 +42,20 @@ jobs:
         mkdir -p app/build/outputs/apk/debug
         mv "$APK_FILE" app/build/outputs/apk/debug/NotifyLog.apk
 
-    - name: Upload APK
+    - name: Upload APK as Artifact
       uses: actions/upload-artifact@v4
       with:
         name: NotifyLog-App
         path: app/build/outputs/apk/debug/NotifyLog.apk
+
+    # NEW: Upload the APK to the Releases page
+    - name: Upload to GitHub Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "app/build/outputs/apk/debug/NotifyLog.apk"
+        tag: "latest"
+        name: "Latest Build"
+        body: "Automated debug build of NotifyLog."
+        allowUpdates: true        # Updates the existing 'latest' release instead of failing
+        replacesArtifacts: true   # Deletes the old NotifyLog.apk and uploads the new one
+        token: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub
