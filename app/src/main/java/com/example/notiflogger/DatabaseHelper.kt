@@ -85,10 +85,10 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Notifs.db", 
         if (cursor.moveToFirst()) {
             do {
                 val id = cursor.getInt(cursor.getColumnIndexOrThrow("id"))
-                val app = cursor.getString(cursor.getColumnIndexOrThrow("app"))?.replace("\"", "\"\"") ?: ""
-                val title = cursor.getString(cursor.getColumnIndexOrThrow("title"))?.replace("\"", "\"\"") ?: ""
-                val content = cursor.getString(cursor.getColumnIndexOrThrow("content"))?.replace("\"", "\"\"") ?: ""
-                val time = cursor.getString(cursor.getColumnIndexOrThrow("logTime")) ?: ""
+                val app = cursor.getString(cursor.getColumnIndexOrThrow("app"))?.replace("\"", "\"\"")?.replace(",", ";") ?: ""
+                val title = cursor.getString(cursor.getColumnIndexOrThrow("title"))?.replace("\"", "\"\"")?.replace(",", ";") ?: ""
+                val content = cursor.getString(cursor.getColumnIndexOrThrow("content"))?.replace("\"", "\"\"")?.replace(",", ";") ?: ""
+                val time = cursor.getString(cursor.getColumnIndexOrThrow("logTime"))?.replace(",", ";") ?: ""
                 
                 val csvRow = "\"$deviceName\",\"$app\",\"$title\",\"$content\",\"$time\"\n"
                 unsyncedList.add(Pair(id, csvRow))
