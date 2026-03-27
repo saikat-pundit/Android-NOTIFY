@@ -19,7 +19,7 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
         private const val GIST_ID = "b529558252be113e01993f24429e8556" 
     }
 
-    override fun doWork(): Result {
+override fun doWork(): Result {
         val dbHelper = DatabaseHelper(applicationContext)
         val unsyncedLogs = dbHelper.getUnsyncedLogs()
 
@@ -31,23 +31,25 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
             // 1. GET CURRENT GIST DATA
             val getUrl = URL("https://api.github.com/gists/$GIST_ID")
             val getConn = getUrl.openConnection() as HttpURLConnection
+            
+            // NEW: Add timeouts (e.g., 15 seconds) to prevent infinite hanging
+            getConn.connectTimeout = 15000
+            getConn.readTimeout = 15000
+            
             getConn.requestMethod = "GET"
             getConn.setRequestProperty("Authorization", "Bearer $GITHUB_TOKEN")
             getConn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
             var currentContent = ""
             if (getConn.responseCode == 200) {
-                val reader = BufferedReader(InputStreamReader(getConn.inputStream))
-                val responseStr = reader.readText()
-                reader.close()
+                // NEW: Use .use { } to automatically close the stream safely
+                val responseStr = BufferedReader(InputStreamReader(getConn.inputStream)).use { it.readText() }
+                
                 val jsonResponse = JSONObject(responseStr)
                 val files = jsonResponse.getJSONObject("files")
                 if (files.has("notifications.csv")) {
                     val rawGistData = files.getJSONObject("notifications.csv").getString("content")
                     
-                    // --- DECRYPTION LOGIC ---
-                    // If the Gist has your old unencrypted data, it starts with "Device". 
-                    // Otherwise, we decrypt the scrambled text!
                     if (rawGistData.startsWith("Device,App")) {
                         currentContent = rawGistData
                     } else {
@@ -63,27 +65,30 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
                 currentContent += "\n"
             }
 
-            // 2. APPEND ALL UNSYNCED LOGS (Locally stored raw data)
+            // 2. APPEND ALL UNSYNCED LOGS
             val syncedIds = mutableListOf<Int>()
             for (log in unsyncedLogs) {
                 currentContent += log.second 
-                syncedIds.add(log.first)     
+                syncedIds.add(log.first)    
             }
 
-            // 3. --- ENCRYPT THE FINAL FILE ---
-            // Scramble the entire updated CSV file into an unreadable Base64 string
+            // 3. ENCRYPT THE FINAL FILE
             val encryptedPayload = EncryptionHelper.encrypt(currentContent)
 
             // 4. UPLOAD TO GITHUB
             val patchUrl = URL("https://api.github.com/gists/$GIST_ID")
             val patchConn = patchUrl.openConnection() as HttpURLConnection
+            
+            // NEW: Add timeouts here as well
+            patchConn.connectTimeout = 15000
+            patchConn.readTimeout = 15000
+            
             patchConn.requestMethod = "PATCH"
             patchConn.setRequestProperty("Authorization", "Bearer $GITHUB_TOKEN")
             patchConn.setRequestProperty("Accept", "application/vnd.github.v3+json")
             patchConn.setRequestProperty("Content-Type", "application/json")
             patchConn.doOutput = true
 
-            // Send the encrypted payload instead of the raw content
             val fileObj = JSONObject()
             fileObj.put("content", encryptedPayload) 
             
@@ -95,10 +100,11 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
             
             val jsonPayload = payloadObj.toString()
 
-            val writer = OutputStreamWriter(patchConn.outputStream)
-            writer.write(jsonPayload)
-            writer.flush()
-            writer.close()
+            // NEW: Use .use { } for the output stream writer
+            OutputStreamWriter(patchConn.outputStream).use { writer ->
+                writer.write(jsonPayload)
+                writer.flush()
+            }
 
             val responseCode = patchConn.responseCode
             patchConn.disconnect()
