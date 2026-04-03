@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.ContentObserver
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.Typeface
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
@@ -21,7 +22,9 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -64,7 +67,6 @@ object RemoteControlHelper {
 
                         val localDeviceName = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
 
-                        // Split by colon, limit 2 so the message text can contain its own colons
                         val parts = rawContent.split(":", limit = 2)
                         
                         if (parts.size == 2) {
@@ -74,14 +76,12 @@ object RemoteControlHelper {
 
                             if (targetDevice.equals(localDeviceName, ignoreCase = true)) {
                                 
-                                // NEW: Check for MESSAGE command
                                 if (commandUpper.startsWith("MESSAGE:")) {
-                                    // Extract everything after "MESSAGE:" (8 characters)
                                     val messageText = commandString.substring(8).trim()
                                     showMessageOverlay(context, messageText)
-                                    resetCommandGist()
+                                    // NOTE: We DO NOT reset the Gist here anymore.
+                                    // It resets when the user clicks CLOSE.
                                 } else {
-                                    // Handle standard commands
                                     when (commandUpper) {
                                         "RING" -> {
                                             startRinging(context)
@@ -110,54 +110,70 @@ object RemoteControlHelper {
         }
     }
 
-    // NEW FUNCTION: Draws the alert on the screen
     private fun showMessageOverlay(context: Context, message: String) {
-        // Must be run on the main UI thread
         Handler(Looper.getMainLooper()).post {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
-                Log.e("RemoteControl", "Missing SYSTEM_ALERT_WINDOW permission")
                 return@post
+            }
+
+            // Play notification tone immediately
+            try {
+                val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                val r = RingtoneManager.getRingtone(context, uri)
+                r.play()
+            } catch (e: Exception) {
+                Log.e("RemoteControl", "Failed to play tone", e)
             }
 
             val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             
-            // Build the layout completely programmatically (no XML needed)
             val overlayLayout = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
-                setBackgroundColor(Color.parseColor("#EE000000")) // 90% opaque black backdrop
+                setBackgroundColor(Color.parseColor("#FF000000")) // 100% Solid Black
                 gravity = Gravity.CENTER
                 setPadding(60, 60, 60, 60)
+                
+                // Force true immersive mode to hide status bar and navigation buttons
+                @Suppress("DEPRECATION")
+                systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_FULLSCREEN)
             }
 
             val messageView = TextView(context).apply {
                 text = message
                 setTextColor(Color.WHITE)
-                textSize = 28f
+                textSize = 36f // Made text much bigger
+                setTypeface(null, Typeface.BOLD) // Made text bold
                 gravity = Gravity.CENTER
-                setPadding(0, 0, 0, 80) // Space between text and button
+                setPadding(0, 0, 0, 100) 
             }
 
             val closeButton = Button(context).apply {
-                text = "CLOSE"
-                setBackgroundColor(Color.DKGRAY)
+                text = "CLOSE MESSAGE"
+                setBackgroundColor(Color.parseColor("#333333"))
                 setTextColor(Color.WHITE)
-                textSize = 18f
-                setPadding(40, 20, 40, 20)
+                textSize = 20f
+                setPadding(60, 30, 60, 30)
                 
-                // When clicked, remove the entire overlay from the screen
                 setOnClickListener {
                     try {
                         windowManager.removeView(overlayLayout)
-                    } catch (e: Exception) {
-                        Log.e("RemoteControl", "Error closing overlay", e)
-                    }
+                        
+                        // Rewrite Gist to IDLE in the background AFTER closing
+                        CoroutineScope(Dispatchers.IO).launch {
+                            resetCommandGist()
+                        }
+                    } catch (e: Exception) {}
                 }
             }
 
             overlayLayout.addView(messageView)
             overlayLayout.addView(closeButton)
 
-            // Setup Window parameters to draw over everything and wake the screen
             val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -172,14 +188,16 @@ object RemoteControlHelper {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or // Draws over status bar area
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,   // Removes screen boundaries
                 PixelFormat.TRANSLUCENT
             )
 
             try {
                 windowManager.addView(overlayLayout, params)
             } catch (e: Exception) {
-                Log.e("RemoteControl", "Failed to add overlay to WindowManager", e)
+                Log.e("RemoteControl", "Failed to add overlay", e)
             }
         }
     }
@@ -189,9 +207,7 @@ object RemoteControlHelper {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         
         if (notificationManager.isNotificationPolicyAccessGranted) {
-            try {
-                audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
-            } catch (e: Exception) {}
+            try { audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT } catch (e: Exception) {}
         }
         
         try {
@@ -199,9 +215,7 @@ object RemoteControlHelper {
                 AudioManager.STREAM_RING, AudioManager.STREAM_NOTIFICATION,
                 AudioManager.STREAM_SYSTEM, AudioManager.STREAM_MUSIC
             )
-            for (stream in streamsToMute) {
-                audioManager.setStreamVolume(stream, 0, 0)
-            }
+            for (stream in streamsToMute) { audioManager.setStreamVolume(stream, 0, 0) }
         } catch (e: Exception) {}
     }
 
@@ -210,9 +224,7 @@ object RemoteControlHelper {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
 
         if (notificationManager.isNotificationPolicyAccessGranted) {
-            try {
-                audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
-            } catch (e: Exception) {}
+            try { audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL } catch (e: Exception) {}
         }
         
         try {
@@ -246,17 +258,11 @@ object RemoteControlHelper {
             vibrator?.vibrate(pattern, 0)
         }
 
-        val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) 
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+        val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
 
         mediaPlayer = MediaPlayer().apply {
             setDataSource(context, alarmUri)
-            setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            )
+            setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
             isLooping = true
             prepare()
             start()
@@ -268,32 +274,17 @@ object RemoteControlHelper {
                 stopRinging(context)
             }
         }
-        context.contentResolver.registerContentObserver(
-            android.provider.Settings.System.CONTENT_URI, 
-            true, 
-            volumeObserver!!
-        )
+        context.contentResolver.registerContentObserver(android.provider.Settings.System.CONTENT_URI, true, volumeObserver!!)
     }
 
     fun stopRinging(context: Context) {
         if (!isRinging) return
-        
-        try {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
-            mediaPlayer = null
-        } catch (e: Exception) {}
-
-        try {
-            vibrator?.cancel()
-            vibrator = null
-        } catch (e: Exception) {}
-
+        try { mediaPlayer?.stop(); mediaPlayer?.release(); mediaPlayer = null } catch (e: Exception) {}
+        try { vibrator?.cancel(); vibrator = null } catch (e: Exception) {}
         if (volumeObserver != null) {
             context.contentResolver.unregisterContentObserver(volumeObserver!!)
             volumeObserver = null
         }
-        
         isRinging = false
     }
 
@@ -307,10 +298,7 @@ object RemoteControlHelper {
             patchConn.setRequestProperty("Content-Type", "application/json")
             patchConn.doOutput = true
 
-            val payload = """
-                {"files": {"command.txt": {"content": "IDLE"}}}
-            """.trimIndent()
-
+            val payload = """{"files": {"command.txt": {"content": "IDLE"}}}"""
             OutputStreamWriter(patchConn.outputStream).use { it.write(payload) }
             patchConn.responseCode 
             patchConn.disconnect()
