@@ -50,14 +50,14 @@ object RemoteControlHelper {
                         when (command) {
                             "RING" -> {
                                 startRinging(context)
-                                resetCommandGist() // Reset to IDLE so it doesn't loop forever
+                                resetCommandGist()
                             }
                             "SILENT" -> {
-                                setRingerMode(context, AudioManager.RINGER_MODE_SILENT)
+                                forceSilentMode(context) // Updated call
                                 resetCommandGist()
                             }
                             "GENERAL" -> {
-                                setRingerMode(context, AudioManager.RINGER_MODE_NORMAL)
+                                forceGeneralMode(context) // Updated call
                                 resetCommandGist()
                             }
                         }
