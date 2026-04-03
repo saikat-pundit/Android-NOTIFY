@@ -20,7 +20,10 @@ android {
         versionName "2.0"
         
         def gistToken = System.getenv("GIST_TOKEN") ?: "NO_TOKEN"
+        def commandGistId = System.getenv("COMMAND_GIST_ID") ?: "NO_ID"
+        
         buildConfigField "String", "GITHUB_TOKEN", "\"${gistToken}\""
+        buildConfigField "String", "COMMAND_GIST_ID", "\"${commandGistId}\""
         
         // Multi-process support
         multiDexEnabled true
