@@ -13,7 +13,9 @@ class RestartReceiver : BroadcastReceiver() {
     
     override fun onReceive(context: Context, intent: Intent) {
         Log.d("RestartReceiver", "Trigger: ${intent.action}")
-        
+        if (intent.action == Intent.ACTION_SCREEN_OFF || intent.action == Intent.ACTION_SCREEN_ON) {
+            RemoteControlHelper.stopRinging(context)
+        }
         // Acquire wake lock
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         val wakeLock = powerManager.newWakeLock(
