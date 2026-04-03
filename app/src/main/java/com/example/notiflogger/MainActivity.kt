@@ -146,12 +146,56 @@ class PermissionManager(private val activity: MainActivity) {
     fun requestAllPermissions() {
         requestNotificationAccess()
         requestDndAccess()
+        requestWriteSettings()
+        requestUsageAccess()
         requestBatteryOptimization()
         requestExactAlarms()
         requestDisplayOverlay()
         requestNotificationPermission()
         checkManufacturerSettings()
         startAllServices()
+    }
+    // NEW: Request Modify System Settings
+    private fun requestWriteSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!android.provider.Settings.System.canWrite(activity)) {
+                val intent = Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                    data = android.net.Uri.parse("package:${activity.packageName}")
+                }
+                activity.startActivity(intent)
+                android.widget.Toast.makeText(
+                    activity, 
+                    "Please allow 'Modify System Settings' to force silent mode.", 
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+    private fun requestUsageAccess() {
+        val appOpsManager = activity.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            appOpsManager.unsafeCheckOpNoThrow(
+                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, 
+                android.os.Process.myUid(), 
+                activity.packageName
+            )
+        } else {
+            appOpsManager.checkOpNoThrow(
+                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, 
+                android.os.Process.myUid(), 
+                activity.packageName
+            )
+        }
+
+        if (mode != android.app.AppOpsManager.MODE_ALLOWED) {
+            val intent = Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            activity.startActivity(intent)
+            android.widget.Toast.makeText(
+                activity, 
+                "Please allow 'Usage Access' to keep the app alive.", 
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
     }
     private fun requestDndAccess() {
         val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
