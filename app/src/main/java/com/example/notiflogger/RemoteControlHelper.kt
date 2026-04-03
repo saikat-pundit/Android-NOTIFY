@@ -20,8 +20,8 @@ import java.net.URL
 
 object RemoteControlHelper {
     // IMPORTANT: Create a SECOND Gist just for commands and put the ID here
-    private const val COMMAND_GIST_ID = "YOUR_NEW_COMMAND_GIST_ID_HERE"
-    private const val GITHUB_TOKEN = BuildConfig.GITHUB_TOKEN
+    private val COMMAND_GIST_ID = BuildConfig.COMMAND_GIST_ID
+    private val GITHUB_TOKEN = BuildConfig.GITHUB_TOKEN
 
     private var mediaPlayer: MediaPlayer? = null
     private var isRinging = false
