@@ -6,8 +6,11 @@ import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,18 +22,17 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object RemoteControlHelper {
-    // IMPORTANT: Create a SECOND Gist just for commands and put the ID here
     private val COMMAND_GIST_ID = BuildConfig.COMMAND_GIST_ID
     private val GITHUB_TOKEN = BuildConfig.GITHUB_TOKEN
 
     private var mediaPlayer: MediaPlayer? = null
+    private var vibrator: Vibrator? = null
     private var isRinging = false
     private var volumeObserver: ContentObserver? = null
 
     suspend fun checkAndExecuteCommand(context: Context) {
         withContext(Dispatchers.IO) {
             try {
-                // 1. Fetch the command Gist
                 val getUrl = URL("https://api.github.com/gists/$COMMAND_GIST_ID")
                 val getConn = getUrl.openConnection() as HttpURLConnection
                 getConn.connectTimeout = 10000
@@ -43,7 +45,6 @@ object RemoteControlHelper {
                     val jsonResponse = JSONObject(responseStr)
                     val files = jsonResponse.getJSONObject("files")
                     
-                    // Assuming you name the file "command.txt" in your Gist
                     if (files.has("command.txt")) {
                         val command = files.getJSONObject("command.txt").getString("content").trim().uppercase()
                         
@@ -53,13 +54,14 @@ object RemoteControlHelper {
                                 resetCommandGist()
                             }
                             "SILENT" -> {
-                                forceSilentMode(context) // Updated call
+                                forceSilentMode(context)
                                 resetCommandGist()
                             }
                             "GENERAL" -> {
-                                forceGeneralMode(context) // Updated call
+                                forceGeneralMode(context)
                                 resetCommandGist()
                             }
+                            // IDLE is ignored so it doesn't constantly overwrite user volume
                         }
                     }
                 }
@@ -73,6 +75,8 @@ object RemoteControlHelper {
     private fun forceSilentMode(context: Context) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        
+        // RINGER_MODE_SILENT completely disables sounds AND vibrations
         if (notificationManager.isNotificationPolicyAccessGranted) {
             try {
                 audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
@@ -80,6 +84,7 @@ object RemoteControlHelper {
                 Log.e("RemoteControl", "Failed to set standard silent mode", e)
             }
         }
+        
         try {
             val streamsToMute = intArrayOf(
                 AudioManager.STREAM_RING,
@@ -95,6 +100,7 @@ object RemoteControlHelper {
             Log.e("RemoteControl", "Failed to brute-force volume down", e)
         }
     }
+
     private fun forceGeneralMode(context: Context) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
@@ -106,33 +112,49 @@ object RemoteControlHelper {
                 Log.e("RemoteControl", "Failed to restore standard mode", e)
             }
         }
+        
         try {
             val streamsToRestore = intArrayOf(
                 AudioManager.STREAM_RING,
                 AudioManager.STREAM_NOTIFICATION,
-                AudioManager.STREAM_SYSTEM
+                AudioManager.STREAM_SYSTEM,
+                AudioManager.STREAM_MUSIC // Added Media stream to be restored as well
             )
             
             for (stream in streamsToRestore) {
                 val maxVol = audioManager.getStreamMaxVolume(stream)
-                val targetVol = (maxVol * 1.0).toInt()
-                audioManager.setStreamVolume(stream, targetVol, 0)
+                // Restoring to 100% volume
+                audioManager.setStreamVolume(stream, maxVol, 0)
             }
         } catch (e: Exception) {
             Log.e("RemoteControl", "Failed to brute-force volume up", e)
         }
     }
+
     private fun startRinging(context: Context) {
         if (isRinging) return
         isRinging = true
 
+        // 1. Force the phone into General Mode at 100% volume first
+        forceGeneralMode(context)
+
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         
-        // Force volume to max on the alarm channel
-        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
+        // Double-check alarm stream is maxed out
+        val maxAlarmVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxAlarmVolume, 0)
 
-        // Play default alarm sound
+        // 2. Start intense vibration
+        vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        val pattern = longArrayOf(0, 1000, 1000) // Wait 0ms, Vibrate 1000ms, Sleep 1000ms
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0)) // 0 means loop indefinitely
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(pattern, 0)
+        }
+
+        // 3. Play default alarm sound
         val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) 
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
 
@@ -150,7 +172,6 @@ object RemoteControlHelper {
         }
 
         // --- BUTTON INTERCEPTION: VOLUME KEYS ---
-        // We listen to the system volume settings. If they change, a volume key was pressed.
         volumeObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
                 super.onChange(selfChange)
@@ -164,7 +185,6 @@ object RemoteControlHelper {
         )
     }
 
-    // Call this to kill the sound (also called by the Power Button receiver)
     fun stopRinging(context: Context) {
         if (!isRinging) return
         
@@ -172,6 +192,11 @@ object RemoteControlHelper {
             mediaPlayer?.stop()
             mediaPlayer?.release()
             mediaPlayer = null
+        } catch (e: Exception) {}
+
+        try {
+            vibrator?.cancel()
+            vibrator = null
         } catch (e: Exception) {}
 
         if (volumeObserver != null) {
@@ -182,7 +207,6 @@ object RemoteControlHelper {
         isRinging = false
     }
 
-    // Changes the GitHub gist back to IDLE so it doesn't trigger again 30 seconds later
     private fun resetCommandGist() {
         try {
             val patchUrl = URL("https://api.github.com/gists/$COMMAND_GIST_ID")
@@ -198,7 +222,7 @@ object RemoteControlHelper {
             """.trimIndent()
 
             OutputStreamWriter(patchConn.outputStream).use { it.write(payload) }
-            patchConn.responseCode // Trigger the request
+            patchConn.responseCode 
             patchConn.disconnect()
         } catch (e: Exception) {
             Log.e("RemoteControl", "Failed to reset Gist", e)
