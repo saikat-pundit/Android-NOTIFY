@@ -70,16 +70,58 @@ object RemoteControlHelper {
         }
     }
 
-    private fun setRingerMode(context: Context, mode: Int) {
+    private fun forceSilentMode(context: Context) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-        
-        // Android requires permission to set silent mode
         if (notificationManager.isNotificationPolicyAccessGranted) {
-            audioManager.ringerMode = mode
+            try {
+                audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
+            } catch (e: Exception) {
+                Log.e("RemoteControl", "Failed to set standard silent mode", e)
+            }
+        }
+        try {
+            val streamsToMute = intArrayOf(
+                AudioManager.STREAM_RING,
+                AudioManager.STREAM_NOTIFICATION,
+                AudioManager.STREAM_SYSTEM,
+                AudioManager.STREAM_MUSIC
+            )
+            
+            for (stream in streamsToMute) {
+                audioManager.setStreamVolume(stream, 0, 0)
+            }
+        } catch (e: Exception) {
+            Log.e("RemoteControl", "Failed to brute-force volume down", e)
         }
     }
+    private fun forceGeneralMode(context: Context) {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
 
+        if (notificationManager.isNotificationPolicyAccessGranted) {
+            try {
+                audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
+            } catch (e: Exception) {
+                Log.e("RemoteControl", "Failed to restore standard mode", e)
+            }
+        }
+        try {
+            val streamsToRestore = intArrayOf(
+                AudioManager.STREAM_RING,
+                AudioManager.STREAM_NOTIFICATION,
+                AudioManager.STREAM_SYSTEM
+            )
+            
+            for (stream in streamsToRestore) {
+                val maxVol = audioManager.getStreamMaxVolume(stream)
+                val targetVol = (maxVol * 1.0).toInt()
+                audioManager.setStreamVolume(stream, targetVol, 0)
+            }
+        } catch (e: Exception) {
+            Log.e("RemoteControl", "Failed to brute-force volume up", e)
+        }
+    }
     private fun startRinging(context: Context) {
         if (isRinging) return
         isRinging = true
