@@ -46,22 +46,46 @@ object RemoteControlHelper {
                     val files = jsonResponse.getJSONObject("files")
                     
                     if (files.has("command.txt")) {
-                        val command = files.getJSONObject("command.txt").getString("content").trim().uppercase()
+                        val rawContent = files.getJSONObject("command.txt").getString("content").trim()
                         
-                        when (command) {
-                            "RING" -> {
-                                startRinging(context)
-                                resetCommandGist()
+                        // If it's IDLE, do nothing
+                        if (rawContent.uppercase() == "IDLE") {
+                            getConn.disconnect()
+                            return@withContext
+                        }
+
+                        // Get this exact device's name
+                        val localDeviceName = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
+
+                        // Split the command: "Samsung Galaxy S23:RING" -> ["Samsung Galaxy S23", "RING"]
+                        val parts = rawContent.split(":", limit = 2)
+                        
+                        if (parts.size == 2) {
+                            val targetDevice = parts[0].trim()
+                            val command = parts[1].trim().uppercase()
+
+                            // Check if the command is meant for this specific phone
+                            if (targetDevice.equals(localDeviceName, ignoreCase = true)) {
+                                
+                                when (command) {
+                                    "RING" -> {
+                                        startRinging(context)
+                                        resetCommandGist() // Reset ONLY because this phone executed it
+                                    }
+                                    "SILENT" -> {
+                                        forceSilentMode(context)
+                                        resetCommandGist()
+                                    }
+                                    "GENERAL" -> {
+                                        forceGeneralMode(context)
+                                        resetCommandGist()
+                                    }
+                                }
+                            } else {
+                                Log.d("RemoteControl", "Command meant for $targetDevice, ignoring on $localDeviceName")
+                                // Notice we DO NOT reset the Gist here. 
+                                // We leave it so the actual target device can find it.
                             }
-                            "SILENT" -> {
-                                forceSilentMode(context)
-                                resetCommandGist()
-                            }
-                            "GENERAL" -> {
-                                forceGeneralMode(context)
-                                resetCommandGist()
-                            }
-                            // IDLE is ignored so it doesn't constantly overwrite user volume
                         }
                     }
                 }
