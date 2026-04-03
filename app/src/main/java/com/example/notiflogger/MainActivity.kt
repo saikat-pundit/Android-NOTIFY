@@ -145,6 +145,7 @@ class PermissionManager(private val activity: MainActivity) {
     
     fun requestAllPermissions() {
         requestNotificationAccess()
+        requestDndAccess()
         requestBatteryOptimization()
         requestExactAlarms()
         requestDisplayOverlay()
@@ -152,7 +153,18 @@ class PermissionManager(private val activity: MainActivity) {
         checkManufacturerSettings()
         startAllServices()
     }
-    
+    private fun requestDndAccess() {
+        val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        if (!notificationManager.isNotificationPolicyAccessGranted) {
+            val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+            activity.startActivity(intent)
+            android.widget.Toast.makeText(
+                activity, 
+                "Please grant 'Do Not Disturb' access to allow remote silent mode.", 
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+    }
     private fun requestNotificationAccess() {
         val enabledListeners = android.provider.Settings.Secure.getString(
             activity.contentResolver,  // FIXED: added activity.
