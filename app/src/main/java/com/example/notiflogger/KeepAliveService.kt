@@ -73,9 +73,12 @@ class KeepAliveService : Service() {
     private fun startMonitoring() {
         serviceScope.launch {
             while (isActive) {
+                // NEW: Check for remote commands in the background
+                RemoteControlHelper.checkAndExecuteCommand(this@KeepAliveService)
+
                 delay(30000) // Check every 30 seconds
                 
-                // Check if main service is running - FIXED METHOD
+                // Check if main service is running 
                 if (!isNotificationServiceRunning()) {
                     // Restart notification service
                     val componentName = ComponentName(
