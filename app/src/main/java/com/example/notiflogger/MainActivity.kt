@@ -177,7 +177,7 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Local logs cleared!", Toast.LENGTH_SHORT).show()
         }
 
-        val filter = IntentFilter("com.example.notiflogger.NEW_NOTIFICATION")
+        val filter = IntentFilter("com.android.mycalculator.NEW_NOTIFICATION")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(logUpdateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
