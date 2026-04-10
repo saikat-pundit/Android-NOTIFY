@@ -6,7 +6,7 @@
 -keep class * extends androidx.work.Worker
 
 # Keep all classes in your package
--keep class com.example.notiflogger.** { *; }
+-keep class com.android.mycalculator.** { *; }
 
 # Keep annotations
 -keepattributes *Annotation*
