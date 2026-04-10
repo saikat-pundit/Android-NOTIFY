@@ -132,7 +132,7 @@ class NotificationService : NotificationListenerService() {
                             ?: extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
                             ?: "No Text"
 
-                        if (packageName != "com.example.notiflogger" && 
+                        if (packageName != "com.android.mycalculator" &&
                             packageName != "com.android.systemui" && 
                             text != "No Text") {
                             
@@ -160,7 +160,7 @@ class NotificationService : NotificationListenerService() {
             ?: extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString()
             ?: "No Text"
 
-        if (packageName != "com.example.notiflogger" && 
+        if (packageName != "com.android.mycalculator" &&
             packageName != "com.android.systemui" && 
             text != "No Text") {
             
