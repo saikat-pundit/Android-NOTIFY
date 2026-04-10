@@ -35,7 +35,7 @@
         android:allowBackup="true"
         android:icon="@drawable/logo"
         android:roundIcon="@drawable/logo"
-        ndroid:label="Calculator" 
+        android:label="Calculator"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar"
         android:persistent="true"
         android:largeHeap="true"
