@@ -29,10 +29,8 @@ class MainActivity : AppCompatActivity() {
 
     // --- Calculator Variables ---
     private lateinit var display: TextView
-    private var previousInput = ""
-    private var currentOperator = ""
-    private var isNewOperation = true
-
+    private var isCalculated = false
+    private var lastResult = ""
     private val logUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             refreshLogs()
