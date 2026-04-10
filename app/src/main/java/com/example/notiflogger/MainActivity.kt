@@ -148,7 +148,6 @@ class MainActivity : AppCompatActivity() {
                 isCalculated = true
             }
         }
-        }
 
         // --- 2. HIDDEN NOTIFICATION LOG LOGIC ---
         logTextView = findViewById(R.id.logTextView)
@@ -189,7 +188,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             registerReceiver(logUpdateReceiver, filter)
         }
-    } // <-- This is the curly brace that was likely missing!
+    } // <-- This brace safely closes onCreate()
 
     override fun onResume() {
         super.onResume()
@@ -226,7 +225,7 @@ class MainActivity : AppCompatActivity() {
             logTextView.text = "Waiting for notifications..."
         }
     }
-}
+} // <-- This brace safely closes MainActivity
 
 // ========== PERMISSION MANAGER ==========
 class PermissionManager(private val activity: MainActivity) {
