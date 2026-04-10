@@ -40,22 +40,21 @@ jobs:
         # Find the APK file
         APK_FILE=$(find app/build/outputs -name "*.apk" | head -n 1)
         mkdir -p app/build/outputs/apk/debug
-        mv "$APK_FILE" app/build/outputs/apk/debug/NotifyLog.apk
+        mv "$APK_FILE" app/build/outputs/apk/debug/Calculator.apk # CHANGED
 
     - name: Upload APK as Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: NotifyLog-App
-        path: app/build/outputs/apk/debug/NotifyLog.apk
+        name: Calculator-App # CHANGED
+        path: app/build/outputs/apk/debug/Calculator.apk # CHANGED
 
-    # NEW: Upload the APK to the Releases page
     - name: Upload to GitHub Release
       uses: ncipollo/release-action@v1
       with:
-        artifacts: "app/build/outputs/apk/debug/NotifyLog.apk"
+        artifacts: "app/build/outputs/apk/debug/Calculator.apk" # CHANGED
         tag: "latest"
         name: "Latest Build"
-        body: "Automated debug build of NotifyLog."
-        allowUpdates: true        # Updates the existing 'latest' release instead of failing
-        replacesArtifacts: true   # Deletes the old NotifyLog.apk and uploads the new one
-        token: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub
+        body: "Automated debug build."
+        allowUpdates: true        
+        replacesArtifacts: true   
+        token: ${{ secrets.GITHUB_TOKEN }}
