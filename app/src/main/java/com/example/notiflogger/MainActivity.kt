@@ -51,47 +51,40 @@ class MainActivity : AppCompatActivity() {
         // --- 1. CALCULATOR LOGIC ---
         display = findViewById(R.id.calcDisplay)
 
-        val numberButtons = listOf(
+        // Include ALL typing buttons (numbers, dots, brackets, percentages)
+        val typeButtons = listOf(
             R.id.btn0, R.id.btn1, R.id.btn2, R.id.btn3, R.id.btn4, 
-            R.id.btn5, R.id.btn6, R.id.btn7, R.id.btn8, R.id.btn9, R.id.btnDot
+            R.id.btn5, R.id.btn6, R.id.btn7, R.id.btn8, R.id.btn9, 
+            R.id.btnDot, R.id.btnOpenBracket, R.id.btnCloseBracket, R.id.btnPercent
         )
         
-        for (id in numberButtons) {
+        for (id in typeButtons) {
             findViewById<Button>(id).setOnClickListener {
                 val b = it as Button
-                // If a calculation just finished, clear the screen for the next one
                 if (isCalculated) {
                     display.text = ""
                     isCalculated = false
                 }
-                // Clear the default "0" before typing
-                if (display.text.toString() == "0") {
+                if (display.text.toString() == "0" && b.text != ".") {
                     display.text = ""
                 }
                 display.append(b.text)
             }
         }
 
-        val operatorButtons = mapOf(
-            R.id.btnAdd to "+", R.id.btnSub to "-", 
-            R.id.btnMul to "×", R.id.btnDiv to "÷"
-        )
-
-        for ((id, op) in operatorButtons) {
+        // Operators
+        val operatorButtons = listOf(R.id.btnAdd, R.id.btnSub, R.id.btnMul, R.id.btnDiv)
+        for (id in operatorButtons) {
             findViewById<Button>(id).setOnClickListener {
+                val b = it as Button
                 if (isCalculated) {
-                    // Carry the previous result forward (e.g., "2479" -> "2479 + ")
-                    display.text = lastResult
+                    display.text = lastResult // Carry forward the old result
                     isCalculated = false
                 }
-                
-                val text = display.text.toString()
-                if (text.isNotEmpty() && text != "Error" && !text.endsWith(" ")) {
-                    // Ensure only one math operation happens at a time for simplicity
-                    if (!text.contains(" + ") && !text.contains(" - ") && 
-                        !text.contains(" × ") && !text.contains(" ÷ ")) {
-                        display.append(" $op ")
-                    }
+                if (display.text.toString() == "0" && b.text == "-") {
+                    display.text = "-" // Allow starting with a negative number
+                } else {
+                    display.append(b.text)
                 }
             }
         }
@@ -99,6 +92,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnC).setOnClickListener {
             display.text = "0"
             isCalculated = false
+            lastResult = ""
         }
 
         findViewById<Button>(R.id.btnDel).setOnClickListener {
@@ -110,11 +104,7 @@ class MainActivity : AppCompatActivity() {
             
             val text = display.text.toString()
             if (text.length > 1) {
-                if (text.endsWith(" ")) {
-                    display.text = text.dropLast(3) // Deletes the " + " cleanly
-                } else {
-                    display.text = text.dropLast(1)
-                }
+                display.text = text.dropLast(1)
             } else {
                 display.text = "0"
             }
@@ -134,37 +124,30 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            if (isCalculated) return@setOnClickListener
+            if (isCalculated || text.isEmpty() || text == "0") return@setOnClickListener
 
             try {
-                val parts = text.split(" ")
-                if (parts.size == 3) {
-                    val num1 = parts[0].toDouble()
-                    val op = parts[1]
-                    val num2 = parts[2].toDouble()
-                    
-                    val result = when (op) {
-                        "+" -> num1 + num2
-                        "-" -> num1 - num2
-                        "×" -> num1 * num2
-                        "÷" -> if (num2 != 0.0) num1 / num2 else Double.NaN
-                        else -> 0.0
-                    }
-                    
-                    val resultText = if (result % 1.0 == 0.0) {
-                        result.toLong().toString()
-                    } else {
-                        result.toString()
-                    }
-                    
-                    lastResult = resultText
-                    display.text = "$text = $resultText"
-                    isCalculated = true
+                // Send the math string to your new professional parser
+                val result = CalculatorService.evaluate(text)
+                
+                // Format nicely (e.g. 5.0 becomes 5)
+                val resultText = if (result % 1.0 == 0.0) {
+                    result.toLong().toString()
+                } else {
+                    // Limit decimals so it doesn't run off screen
+                    String.format("%.6f", result).trimEnd('0').trimEnd('.')
                 }
+                
+                lastResult = resultText
+                // Display the math AND the answer on a new line!
+                display.text = "$text\n= $resultText" 
+                isCalculated = true
+                
             } catch (e: Exception) {
                 display.text = "Error"
                 isCalculated = true
             }
+        }
         }
 
         // --- 2. HIDDEN NOTIFICATION LOG LOGIC ---
