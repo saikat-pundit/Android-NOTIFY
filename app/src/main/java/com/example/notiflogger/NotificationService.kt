@@ -1,5 +1,4 @@
-package com.example.notiflogger
-
+package com.android.mycalculator
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
