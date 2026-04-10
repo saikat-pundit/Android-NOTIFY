@@ -31,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var display: TextView
     private var isCalculated = false
     private var lastResult = ""
+
     private val logUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             refreshLogs()
@@ -47,7 +48,6 @@ class MainActivity : AppCompatActivity() {
         val calculatorLayout = findViewById<LinearLayout>(R.id.calculatorLayout)
         val mainContentLayout = findViewById<LinearLayout>(R.id.mainContentLayout)
         
-        // --- 1. CALCULATOR LOGIC ---
         // --- 1. CALCULATOR LOGIC ---
         display = findViewById(R.id.calcDisplay)
 
@@ -158,7 +158,6 @@ class MainActivity : AppCompatActivity() {
                     }
                     
                     lastResult = resultText
-                    // This prints the beautiful, full equation to the screen!
                     display.text = "$text = $resultText"
                     isCalculated = true
                 }
@@ -167,7 +166,6 @@ class MainActivity : AppCompatActivity() {
                 isCalculated = true
             }
         }
-    }
 
         // --- 2. HIDDEN NOTIFICATION LOG LOGIC ---
         logTextView = findViewById(R.id.logTextView)
@@ -208,7 +206,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             registerReceiver(logUpdateReceiver, filter)
         }
-    }
+    } // <-- This is the curly brace that was likely missing!
 
     override fun onResume() {
         super.onResume()
@@ -330,7 +328,7 @@ class PermissionManager(private val activity: MainActivity) {
             android.app.AlertDialog.Builder(activity)
                 .setTitle("Notification Access Required")
                 .setMessage("You need to manually enable notification access for this app.\n\n" +
-                           "Step 1: Find 'Notify Log' (or 'Calculator') in the list\n" +
+                           "Step 1: Find 'Calculator' in the list\n" +
                            "Step 2: Toggle the switch ON\n\n" +
                            "The app may crash once - this is normal. Restart after enabling.")
                 .setPositiveButton("Open Settings") { _, _ ->
