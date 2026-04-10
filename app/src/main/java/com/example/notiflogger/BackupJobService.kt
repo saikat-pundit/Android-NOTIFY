@@ -1,4 +1,4 @@
-package com.example.notiflogger
+package com.android.mycalculator
 import com.example.notiflogger.NotificationService
 import com.example.notiflogger.KeepAliveService
 import com.example.notiflogger.HeartbeatService
