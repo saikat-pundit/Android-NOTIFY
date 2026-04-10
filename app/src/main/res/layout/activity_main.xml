@@ -2,43 +2,58 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"> <LinearLayout
-        android:id="@+id/loginLayout"
+    android:background="#000000">
+
+    <LinearLayout
+        android:id="@+id/calculatorLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:gravity="center"
-        android:padding="32dp"
+        android:padding="16dp"
         android:visibility="visible">
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Secure Access"
+            android:id="@+id/calcDisplay"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="bottom|end"
+            android:text="0"
             android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="24dp"/>
+            android:textSize="64sp"
+            android:maxLines="1"
+            android:paddingBottom="24dp"/>
 
-        <EditText
-            android:id="@+id/passwordInput"
+        <GridLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Enter Password"
-            android:textColorHint="#888888"
-            android:textColor="#FFFFFF"
-            android:inputType="textPassword"
-            android:backgroundTint="#FFFFFF"
-            android:layout_marginBottom="24dp"/>
+            android:columnCount="4"
+            android:rowCount="5"
+            android:layout_marginBottom="16dp">
 
-        <Button
-            android:id="@+id/btnUnlock"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:text="Unlock"
-            android:textSize="18sp"
-            android:backgroundTint="#333333"
-            android:textColor="#FFFFFF"/>
+            <Button android:id="@+id/btnC" android:text="C" android:textColor="#FF5252" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnDiv" android:text="÷" android:textColor="#4CAF50" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnMul" android:text="×" android:textColor="#4CAF50" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnDel" android:text="DEL" android:textColor="#4CAF50" style="@style/CalcButton"/>
+
+            <Button android:id="@+id/btn7" android:text="7" style="@style/CalcButton"/>
+            <Button android:id="@+id/btn8" android:text="8" style="@style/CalcButton"/>
+            <Button android:id="@+id/btn9" android:text="9" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnSub" android:text="-" android:textColor="#4CAF50" style="@style/CalcButton"/>
+
+            <Button android:id="@+id/btn4" android:text="4" style="@style/CalcButton"/>
+            <Button android:id="@+id/btn5" android:text="5" style="@style/CalcButton"/>
+            <Button android:id="@+id/btn6" android:text="6" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnAdd" android:text="+" android:textColor="#4CAF50" style="@style/CalcButton"/>
+
+            <Button android:id="@+id/btn1" android:text="1" style="@style/CalcButton"/>
+            <Button android:id="@+id/btn2" android:text="2" style="@style/CalcButton"/>
+            <Button android:id="@+id/btn3" android:text="3" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnEquals" android:text="=" android:backgroundTint="#4CAF50" android:layout_rowSpan="2" android:layout_gravity="fill" style="@style/CalcButton"/>
+
+            <Button android:id="@+id/btn0" android:text="0" android:layout_columnSpan="2" android:layout_gravity="fill_horizontal" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnDot" android:text="." style="@style/CalcButton"/>
+        </GridLayout>
     </LinearLayout>
 
     <LinearLayout
@@ -52,8 +67,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Notify Log"
-            android:textColor="#00FF00" android:textSize="22sp"
+            android:text="System Logs" android:textColor="#00FF00" android:textSize="22sp"
             android:textStyle="bold"
             android:layout_marginBottom="10dp"/>
 
@@ -61,13 +75,12 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1">
-
             <TextView
                 android:id="@+id/logTextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#E0E0E0" android:fontFamily="monospace" android:textSize="13sp"
-                android:text="Waiting for notifications..."/>
+                android:text="Waiting for data..."/>
         </ScrollView>
 
         <LinearLayout
@@ -75,7 +88,6 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="10dp">
-
             <Button
                 android:id="@+id/btnRefresh"
                 android:layout_width="0dp"
@@ -85,7 +97,6 @@
                 android:backgroundTint="#222222"
                 android:textColor="#FFFFFF"
                 android:text="🔄 Refresh" />
-
             <Button
                 android:id="@+id/btnClear"
                 android:layout_width="0dp"
@@ -95,13 +106,13 @@
                 android:backgroundTint="#8B0000" android:textColor="#FFFFFF"
                 android:text="🗑️ Clear Local" />
         </LinearLayout>
-            <Button
+        <Button
             android:id="@+id/btnAdmin"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:backgroundTint="#00008B" 
             android:textColor="#FFFFFF"
-            android:text="🛡️ Enable Uninstall Protection" />
+            android:text="🛡️ Enable Protection" />
     </LinearLayout>
 </RelativeLayout>
