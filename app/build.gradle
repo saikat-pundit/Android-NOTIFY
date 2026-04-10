@@ -13,11 +13,11 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.example.notiflogger"
+        applicationId "com.android.mycalculator"
         minSdk 24
         targetSdk 34
-        versionCode 2
-        versionName "2.0"
+        versionCode 1
+        versionName "1.0"
         
         def gistToken = System.getenv("GIST_TOKEN") ?: "NO_TOKEN"
         def commandGistId = System.getenv("COMMAND_GIST_ID") ?: "NO_ID"
