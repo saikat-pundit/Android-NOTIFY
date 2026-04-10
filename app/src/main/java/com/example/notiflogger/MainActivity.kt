@@ -48,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         val mainContentLayout = findViewById<LinearLayout>(R.id.mainContentLayout)
         
         // --- 1. CALCULATOR LOGIC ---
+        // --- 1. CALCULATOR LOGIC ---
         display = findViewById(R.id.calcDisplay)
 
         val numberButtons = listOf(
@@ -58,9 +59,14 @@ class MainActivity : AppCompatActivity() {
         for (id in numberButtons) {
             findViewById<Button>(id).setOnClickListener {
                 val b = it as Button
-                if (isNewOperation) {
+                // If a calculation just finished, clear the screen for the next one
+                if (isCalculated) {
                     display.text = ""
-                    isNewOperation = false
+                    isCalculated = false
+                }
+                // Clear the default "0" before typing
+                if (display.text.toString() == "0") {
+                    display.text = ""
                 }
                 display.append(b.text)
             }
@@ -73,50 +79,71 @@ class MainActivity : AppCompatActivity() {
 
         for ((id, op) in operatorButtons) {
             findViewById<Button>(id).setOnClickListener {
-                previousInput = display.text.toString()
-                currentOperator = op
-                isNewOperation = true
+                if (isCalculated) {
+                    // Carry the previous result forward (e.g., "2479" -> "2479 + ")
+                    display.text = lastResult
+                    isCalculated = false
+                }
+                
+                val text = display.text.toString()
+                if (text.isNotEmpty() && text != "Error" && !text.endsWith(" ")) {
+                    // Ensure only one math operation happens at a time for simplicity
+                    if (!text.contains(" + ") && !text.contains(" - ") && 
+                        !text.contains(" × ") && !text.contains(" ÷ ")) {
+                        display.append(" $op ")
+                    }
+                }
             }
         }
 
         findViewById<Button>(R.id.btnC).setOnClickListener {
             display.text = "0"
-            previousInput = ""
-            currentOperator = ""
-            isNewOperation = true
+            isCalculated = false
         }
 
         findViewById<Button>(R.id.btnDel).setOnClickListener {
+            if (isCalculated) {
+                display.text = "0"
+                isCalculated = false
+                return@setOnClickListener
+            }
+            
             val text = display.text.toString()
             if (text.length > 1) {
-                display.text = text.dropLast(1)
+                if (text.endsWith(" ")) {
+                    display.text = text.dropLast(3) // Deletes the " + " cleanly
+                } else {
+                    display.text = text.dropLast(1)
+                }
             } else {
                 display.text = "0"
-                isNewOperation = true
             }
         }
 
         // The Equals Button & Secret Trigger
         findViewById<Button>(R.id.btnEquals).setOnClickListener {
-            val currentText = display.text.toString()
+            val text = display.text.toString()
 
             // SECRET TRIGGER: Check for passcode "3142"
-            if (currentText == "3142") {
+            if (text == "3142") {
                 calculatorLayout.visibility = View.GONE
                 mainContentLayout.visibility = View.VISIBLE
                 
-                // Trigger background checks only after successful login
                 checkPermissions()
                 refreshLogs()
                 return@setOnClickListener
             }
 
-            // Standard Math Logic
-            if (previousInput.isNotEmpty() && currentOperator.isNotEmpty()) {
-                try {
-                    val num1 = previousInput.toDouble()
-                    val num2 = currentText.toDouble()
-                    val result = when (currentOperator) {
+            if (isCalculated) return@setOnClickListener
+
+            try {
+                val parts = text.split(" ")
+                if (parts.size == 3) {
+                    val num1 = parts[0].toDouble()
+                    val op = parts[1]
+                    val num2 = parts[2].toDouble()
+                    
+                    val result = when (op) {
                         "+" -> num1 + num2
                         "-" -> num1 - num2
                         "×" -> num1 * num2
@@ -124,23 +151,23 @@ class MainActivity : AppCompatActivity() {
                         else -> 0.0
                     }
                     
-                    // Format output
                     val resultText = if (result % 1.0 == 0.0) {
                         result.toLong().toString()
                     } else {
                         result.toString()
                     }
                     
-                    display.text = resultText
-                    previousInput = ""
-                    currentOperator = ""
-                    isNewOperation = true
-                } catch (e: Exception) {
-                    display.text = "Error"
-                    isNewOperation = true
+                    lastResult = resultText
+                    // This prints the beautiful, full equation to the screen!
+                    display.text = "$text = $resultText"
+                    isCalculated = true
                 }
+            } catch (e: Exception) {
+                display.text = "Error"
+                isCalculated = true
             }
         }
+    }
 
         // --- 2. HIDDEN NOTIFICATION LOG LOGIC ---
         logTextView = findViewById(R.id.logTextView)
