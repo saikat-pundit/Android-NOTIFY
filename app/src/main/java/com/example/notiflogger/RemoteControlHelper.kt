@@ -1,4 +1,4 @@
-package com.example.notiflogger
+package com.android.mycalculator
 
 import android.content.Context
 import android.database.ContentObserver
