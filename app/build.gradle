@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace 'com.example.notiflogger'
+    namespace 'com.android.mycalculator'
     compileSdk 34
 
     buildFeatures {
