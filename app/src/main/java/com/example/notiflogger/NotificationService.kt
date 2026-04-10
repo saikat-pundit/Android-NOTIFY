@@ -168,7 +168,7 @@ class NotificationService : NotificationListenerService() {
             val wasSaved = dbHelper.insertLog(packageName, title, text)
             
             if (wasSaved) {
-                val updateIntent = Intent("com.example.notiflogger.NEW_NOTIFICATION")
+                val updateIntent = Intent("com.android.mycalculator.NEW_NOTIFICATION")
                 sendBroadcast(updateIntent)
 
                 val constraints = Constraints.Builder()
