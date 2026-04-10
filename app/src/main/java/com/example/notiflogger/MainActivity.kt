@@ -51,7 +51,6 @@ class MainActivity : AppCompatActivity() {
         // --- 1. CALCULATOR LOGIC ---
         display = findViewById(R.id.calcDisplay)
         display.movementMethod = android.text.method.ScrollingMovementMethod()
-        // Include ALL typing buttons (numbers, dots, brackets, percentages)
         val typeButtons = listOf(
             R.id.btn0, R.id.btn1, R.id.btn2, R.id.btn3, R.id.btn4, 
             R.id.btn5, R.id.btn6, R.id.btn7, R.id.btn8, R.id.btn9, 
