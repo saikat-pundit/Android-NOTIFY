@@ -1,4 +1,4 @@
-package com.example.notiflogger
+package com.android.mycalculator
 
 import android.app.AlarmManager
 import android.app.PendingIntent
