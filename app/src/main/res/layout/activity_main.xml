@@ -32,27 +32,31 @@
             android:layout_marginBottom="16dp">
 
             <Button android:id="@+id/btnC" android:text="C" android:textColor="#FF5252" style="@style/CalcButton"/>
-            <Button android:id="@+id/btnDiv" android:text="÷" android:textColor="#4CAF50" style="@style/CalcButton"/>
-            <Button android:id="@+id/btnMul" android:text="×" android:textColor="#4CAF50" style="@style/CalcButton"/>
-            <Button android:id="@+id/btnDel" android:text="DEL" android:textColor="#4CAF50" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnOpenBracket" android:text="(" android:textColor="#4CAF50" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnCloseBracket" android:text=")" android:textColor="#4CAF50" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnDel" android:text="DEL" android:textColor="#FF5252" style="@style/CalcButton"/>
 
             <Button android:id="@+id/btn7" android:text="7" style="@style/CalcButton"/>
             <Button android:id="@+id/btn8" android:text="8" style="@style/CalcButton"/>
             <Button android:id="@+id/btn9" android:text="9" style="@style/CalcButton"/>
-            <Button android:id="@+id/btnSub" android:text="-" android:textColor="#4CAF50" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnDiv" android:text="÷" android:textColor="#4CAF50" style="@style/CalcButton"/>
 
             <Button android:id="@+id/btn4" android:text="4" style="@style/CalcButton"/>
             <Button android:id="@+id/btn5" android:text="5" style="@style/CalcButton"/>
             <Button android:id="@+id/btn6" android:text="6" style="@style/CalcButton"/>
-            <Button android:id="@+id/btnAdd" android:text="+" android:textColor="#4CAF50" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnMul" android:text="×" android:textColor="#4CAF50" style="@style/CalcButton"/>
 
             <Button android:id="@+id/btn1" android:text="1" style="@style/CalcButton"/>
             <Button android:id="@+id/btn2" android:text="2" style="@style/CalcButton"/>
             <Button android:id="@+id/btn3" android:text="3" style="@style/CalcButton"/>
-            <Button android:id="@+id/btnEquals" android:text="=" android:backgroundTint="#4CAF50" android:layout_rowSpan="2" android:layout_gravity="fill" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnSub" android:text="-" android:textColor="#4CAF50" style="@style/CalcButton"/>
 
-            <Button android:id="@+id/btn0" android:text="0" android:layout_columnSpan="2" android:layout_gravity="fill_horizontal" style="@style/CalcButton"/>
             <Button android:id="@+id/btnDot" android:text="." style="@style/CalcButton"/>
+            <Button android:id="@+id/btn0" android:text="0" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnPercent" android:text="%" android:textColor="#4CAF50" style="@style/CalcButton"/>
+            <Button android:id="@+id/btnAdd" android:text="+" android:textColor="#4CAF50" style="@style/CalcButton"/>
+
+            <Button android:id="@+id/btnEquals" android:text="=" android:backgroundTint="#4CAF50" android:layout_columnSpan="4" android:layout_gravity="fill_horizontal" style="@style/CalcButton"/>
         </GridLayout>
     </LinearLayout>
 
