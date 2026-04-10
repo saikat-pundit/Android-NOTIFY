@@ -1,4 +1,4 @@
-package com.example.notiflogger
+package com.android.mycalculator
 
 import android.util.Base64
 import java.security.MessageDigest
