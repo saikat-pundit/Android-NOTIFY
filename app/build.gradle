@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId "com.android.mycalculator"
-        minSdk 24
+        minSdk 21 
         targetSdk 34
         versionCode 1
         versionName "1.0"
@@ -24,9 +24,10 @@ android {
         
         buildConfigField "String", "GITHUB_TOKEN", "\"${gistToken}\""
         buildConfigField "String", "COMMAND_GIST_ID", "\"${commandGistId}\""
-        
-        // Multi-process support
         multiDexEnabled true
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+        }
     }
     
     buildTypes {
@@ -48,16 +49,6 @@ android {
     
     kotlinOptions {
         jvmTarget = '1.8'
-    }
-    
-    // Multiple APK splits if needed
-    splits {
-        abi {
-            enable true
-            reset()
-            include 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-            universalApk true
-        }
     }
 }
 
