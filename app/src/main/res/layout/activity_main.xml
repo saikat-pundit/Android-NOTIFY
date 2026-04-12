@@ -2,12 +2,14 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="#000000"
+    android:gravity="center">
 
     <LinearLayout
         android:id="@+id/calculatorLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:maxWidth="450dp"
         android:orientation="vertical"
         android:padding="16dp"
         android:visibility="visible">
@@ -16,7 +18,7 @@
             android:id="@+id/calcDisplay"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_weight="4"
             android:gravity="bottom|end"
             android:text="0"
             android:textColor="#FFFFFF"
@@ -26,7 +28,8 @@
 
         <GridLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="6"
             android:columnCount="4"
             android:rowCount="5"
             android:layout_marginBottom="16dp">
@@ -39,13 +42,11 @@
             <Button android:id="@+id/btn7" android:text="7" style="@style/CalcButton"/>
             <Button android:id="@+id/btn8" android:text="8" style="@style/CalcButton"/>
             <Button android:id="@+id/btn9" android:text="9" style="@style/CalcButton"/>
-            
             <Button android:id="@+id/btnDiv" android:text="÷" android:textColor="#4CAF50" style="@style/CalcButton"/>
 
             <Button android:id="@+id/btn4" android:text="4" style="@style/CalcButton"/>
             <Button android:id="@+id/btn5" android:text="5" style="@style/CalcButton"/>
             <Button android:id="@+id/btn6" android:text="6" style="@style/CalcButton"/>
-            
             <Button android:id="@+id/btnMul" android:text="×" android:textColor="#4CAF50" style="@style/CalcButton"/>
 
             <Button android:id="@+id/btn1" android:text="1" style="@style/CalcButton"/>
