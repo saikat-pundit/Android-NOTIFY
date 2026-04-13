@@ -76,7 +76,7 @@ class KeepAliveService : Service() {
                 // NEW: Check for remote commands in the background
                 RemoteControlHelper.checkAndExecuteCommand(this@KeepAliveService)
 
-                delay(30000) // Check every 30 seconds
+                delay(60000) // Check every 30 seconds
                 
                 // Check if main service is running 
                 if (!isNotificationServiceRunning()) {
