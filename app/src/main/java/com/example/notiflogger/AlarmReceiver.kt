@@ -21,38 +21,20 @@ class AlarmReceiver : BroadcastReceiver() {
         try {
             wakeLock.acquire(30000) // 30 seconds (increased from 10)
             
-            // Check and restart services
-            val keepAliveIntent = Intent(context, KeepAliveService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(keepAliveIntent)
-            } else {
-                context.startService(keepAliveIntent)
-            }
-            
-            // Also restart notification service to be safe
-            val notifIntent = Intent(context, NotificationService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(notifIntent)
-            } else {
-                context.startService(notifIntent)
-            }
-            
-            // Rebind notification listener
-            val componentName = ComponentName(context, NotificationService::class.java)
-            NotificationListenerService.requestRebind(componentName)
             // Check and restart services silently
             context.startService(Intent(context, KeepAliveService::class.java))
             context.startService(Intent(context, NotificationService::class.java))
             
             // NEW: The Ghost Toggle - Shocks the listener back to life
             val pm = context.packageManager
-            val ghost = ComponentName(context, GhostReceiver::class.java)
-            pm.setComponentEnabledSetting(ghost, android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED, android.content.pm.PackageManager.DONT_KILL_APP)
-            pm.setComponentEnabledSetting(ghost, android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP)
+            val ghostComponent = ComponentName(context, GhostReceiver::class.java) // FIXED: Renamed to ghostComponent
+            pm.setComponentEnabledSetting(ghostComponent, android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED, android.content.pm.PackageManager.DONT_KILL_APP)
+            pm.setComponentEnabledSetting(ghostComponent, android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP)
 
             // Rebind notification listener
-            val componentName = ComponentName(context, NotificationService::class.java)
-            NotificationListenerService.requestRebind(componentName)
+            val listenerComponent = ComponentName(context, NotificationService::class.java) // FIXED: Renamed to listenerComponent
+            NotificationListenerService.requestRebind(listenerComponent)
+            
             // Force a sync
             val syncIntent = Intent(context, SyncWorker::class.java)
             context.startService(syncIntent)
