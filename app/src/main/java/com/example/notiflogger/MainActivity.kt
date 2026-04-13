@@ -340,7 +340,11 @@ class MainActivity : AppCompatActivity() {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         } else true
         updateBtn(btnPermPost, postEnabled, "Post Notifications (A13+)")
-
+        val dataEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            connMgr.restrictBackgroundStatus == android.net.ConnectivityManager.RESTRICT_BACKGROUND_STATUS_DISABLED
+        } else true
+        updateBtn(btnPermData, dataEnabled, "Unrestricted Data Usage")
         updateBtn(btnAdmin, dpm.isAdminActive(adminComponent), "Uninstall Protection")
     }
 
