@@ -36,7 +36,10 @@ class NotificationService : NotificationListenerService() {
     }
 
     private fun captureAllExistingNotifications() {
-        // Offload to background thread so we don't freeze the UI
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val userManager = getSystemService(Context.USER_SERVICE) as android.os.UserManager
+            if (!userManager.isUserUnlocked) return
+        }
         serviceScope.launch {
             try {
                 val activeNotifications = getActiveNotifications()
@@ -109,6 +112,10 @@ class NotificationService : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val userManager = getSystemService(Context.USER_SERVICE) as android.os.UserManager
+            if (!userManager.isUserUnlocked) return
+        }
         val packageName = sbn?.packageName ?: return
         val extras = sbn.notification?.extras ?: return
 
