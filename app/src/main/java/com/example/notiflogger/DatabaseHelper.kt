@@ -108,4 +108,17 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Notifs.db", 
         }
         db.close()
     }
+    // NEW: Deletes logs older than 7 days that have already been synced
+    fun deleteOldSyncedLogs() {
+        val db = this.writableDatabase
+        val sevenDaysAgoMs = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000)
+        
+        try {
+            db.delete("logs", "timestampMs < ? AND is_synced = 1", arrayOf(sevenDaysAgoMs.toString()))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            db.close()
+        }
+    }
 }
