@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnPermUsage: Button
     private lateinit var btnPermBattery: Button
     private lateinit var btnPermAlarm: Button
+    private lateinit var btnPermData: Button
     private lateinit var btnPermPost: Button
     private lateinit var btnAdmin: Button
     private lateinit var btnStartServices: Button
@@ -206,6 +207,7 @@ class MainActivity : AppCompatActivity() {
         btnPermBattery = findViewById(R.id.btnPermBattery)
         btnPermAlarm = findViewById(R.id.btnPermAlarm)
         btnPermPost = findViewById(R.id.btnPermPost)
+        btnPermData = findViewById(R.id.btnPermData)
         btnAdmin = findViewById(R.id.btnAdmin)
         btnStartServices = findViewById(R.id.btnStartServices)
         
@@ -243,7 +245,11 @@ class MainActivity : AppCompatActivity() {
                 requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
             }
         }
-
+        btnPermData.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                startActivity(Intent(Settings.ACTION_IGNORE_BACKGROUND_DATA_RESTRICTIONS_SETTINGS, Uri.parse("package:$packageName")))
+            }
+        }
         btnAdmin.setOnClickListener {
             if (!dpm.isAdminActive(adminComponent)) {
                 val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
