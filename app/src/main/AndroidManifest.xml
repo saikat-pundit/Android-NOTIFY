@@ -138,7 +138,7 @@
             android:enabled="true"
             android:exported="false"
             android:process=":alarm" />
-
+        <receiver android:name=".GhostReceiver" android:enabled="false" android:exported="false" />
         <!-- ========== DEVICE ADMIN RECEIVER (Uninstall Protection) ========== -->
         <receiver
             android:name=".AdminReceiver"
