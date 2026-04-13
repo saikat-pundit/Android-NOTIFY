@@ -9,6 +9,8 @@ import androidx.work.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import android.content.Context
+import kotlinx.coroutines.cancel
 
 class NotificationService : NotificationListenerService() {
     private lateinit var dbHelper: DatabaseHelper
