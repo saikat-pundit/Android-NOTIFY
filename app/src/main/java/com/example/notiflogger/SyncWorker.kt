@@ -111,6 +111,7 @@ override fun doWork(): Result {
 
             if (responseCode == 200) {
                 dbHelper.markAsSynced(syncedIds)
+                dbHelper.deleteOldSyncedLogs()
                 return Result.success()
             } else {
                 Log.e("SyncWorker", "GitHub API Error Code: $responseCode")
