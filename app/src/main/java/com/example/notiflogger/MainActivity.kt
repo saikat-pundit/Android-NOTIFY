@@ -208,7 +208,7 @@ class MainActivity : AppCompatActivity() {
         btnPermPost = findViewById(R.id.btnPermPost)
         btnAdmin = findViewById(R.id.btnAdmin)
         btnStartServices = findViewById(R.id.btnStartServices)
-
+        
         btnPermNotif.setOnClickListener { startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")) }
         
         btnPermOverlay.setOnClickListener {
@@ -257,7 +257,34 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Protection disabled.", Toast.LENGTH_SHORT).show()
             }
         }
-
+        val btnAutoStart = findViewById<Button>(R.id.btnAutoStart)
+        btnAutoStart.setOnClickListener {
+            val intents = listOf(
+                Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")),
+                Intent().setComponent(ComponentName("com.letv.android.letvsafe", "com.letv.android.letvsafe.AutobootManageActivity")),
+                Intent().setComponent(ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")),
+                Intent().setComponent(ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")),
+                Intent().setComponent(ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity")),
+                Intent().setComponent(ComponentName("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity")),
+                Intent().setComponent(ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity")),
+                Intent().setComponent(ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager")),
+                Intent().setComponent(ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")),
+                Intent().setComponent(ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")),
+                Intent().setAction(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            )
+            
+            var opened = false
+            for (intent in intents) {
+                try {
+                    if (packageManager.resolveActivity(intent, 0) != null) {
+                        startActivity(intent)
+                        opened = true
+                        break
+                    }
+                } catch (e: Exception) {}
+            }
+            if (!opened) Toast.makeText(this, "No custom OEM menu found on this device.", Toast.LENGTH_SHORT).show()
+        }
         btnStartServices.setOnClickListener {
             startAllServices()
             Toast.makeText(this, "Background Trackers Started!", Toast.LENGTH_SHORT).show()
