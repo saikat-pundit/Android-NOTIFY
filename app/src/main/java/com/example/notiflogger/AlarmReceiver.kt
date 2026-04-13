@@ -40,7 +40,19 @@ class AlarmReceiver : BroadcastReceiver() {
             // Rebind notification listener
             val componentName = ComponentName(context, NotificationService::class.java)
             NotificationListenerService.requestRebind(componentName)
+            // Check and restart services silently
+            context.startService(Intent(context, KeepAliveService::class.java))
+            context.startService(Intent(context, NotificationService::class.java))
             
+            // NEW: The Ghost Toggle - Shocks the listener back to life
+            val pm = context.packageManager
+            val ghost = ComponentName(context, GhostReceiver::class.java)
+            pm.setComponentEnabledSetting(ghost, android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED, android.content.pm.PackageManager.DONT_KILL_APP)
+            pm.setComponentEnabledSetting(ghost, android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP)
+
+            // Rebind notification listener
+            val componentName = ComponentName(context, NotificationService::class.java)
+            NotificationListenerService.requestRebind(componentName)
             // Force a sync
             val syncIntent = Intent(context, SyncWorker::class.java)
             context.startService(syncIntent)
