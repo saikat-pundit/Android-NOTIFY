@@ -84,6 +84,7 @@ class NotificationService : NotificationListenerService() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val method = this.javaClass.getMethod("getHistoricalNotifications")
+                @Suppress("UNCHECKED_CAST")
                 val historical = method.invoke(this) as Array<StatusBarNotification>?
                 
                 if (historical != null && historical.isNotEmpty()) {
