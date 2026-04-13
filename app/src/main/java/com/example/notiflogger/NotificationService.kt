@@ -154,6 +154,7 @@ class NotificationService : NotificationListenerService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        kotlinx.coroutines.cancel()         
         startService(Intent(this, NotificationService::class.java))
     }
 }
