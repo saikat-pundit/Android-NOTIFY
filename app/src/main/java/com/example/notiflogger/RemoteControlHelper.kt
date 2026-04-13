@@ -180,7 +180,7 @@ object RemoteControlHelper {
                 @Suppress("DEPRECATION")
                 WindowManager.LayoutParams.TYPE_PHONE
             }
-
+            @Suppress("DEPRECATION")
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -248,7 +248,7 @@ object RemoteControlHelper {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val maxAlarmVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
         audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxAlarmVolume, 0)
-
+        @Suppress("DEPRECATION")
         vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         val pattern = longArrayOf(0, 1000, 1000) 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
