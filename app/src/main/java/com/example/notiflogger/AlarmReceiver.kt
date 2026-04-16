@@ -35,9 +35,20 @@ class AlarmReceiver : BroadcastReceiver() {
             val listenerComponent = ComponentName(context, NotificationService::class.java) // FIXED: Renamed to listenerComponent
             NotificationListenerService.requestRebind(listenerComponent)
             
-            // Force a sync
-            val syncIntent = Intent(context, SyncWorker::class.java)
-            context.startService(syncIntent)
+            // Force a sync using WorkManager (FIXED: Cannot use startService for a Worker!)
+            val constraints = androidx.work.Constraints.Builder()
+                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                .build()
+
+            val syncWork = androidx.work.OneTimeWorkRequestBuilder<SyncWorker>()
+                .setConstraints(constraints)
+                .build()
+
+            androidx.work.WorkManager.getInstance(context).enqueueUniqueWork(
+                "AlarmSyncWork",
+                androidx.work.ExistingWorkPolicy.REPLACE,
+                syncWork
+            )
             
             // Set next alarm
             AlarmScheduler.scheduleNextAlarm(context)
