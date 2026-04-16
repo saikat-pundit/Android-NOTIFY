@@ -144,6 +144,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshUsageLogs() {
+        UsageTracker.extractUsageEvents(this, dbHelper)        
         val logs = dbHelper.getAllUsageLogs()
         usageLogTextView.text = if (logs.isNotEmpty()) logs else "Waiting for app usage data..."
     }
