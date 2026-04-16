@@ -151,10 +151,11 @@ class NotificationService : NotificationListenerService() {
                     // 2. Here is the updated request with the 5-minute backoff
                     val syncWorkRequest = OneTimeWorkRequestBuilder<SyncWorker>()
                         .setConstraints(constraints)
+                        .setInitialDelay(1, java.util.concurrent.TimeUnit.MINUTES) // 1 Min Delay
                         .setBackoffCriteria(
                             BackoffPolicy.LINEAR,
-                            5,
-                            java.util.concurrent.TimeUnit.MINUTES
+                            10, // Absolute minimum allowed by Android OS
+                            java.util.concurrent.TimeUnit.SECONDS
                         )
                         .build()
 
