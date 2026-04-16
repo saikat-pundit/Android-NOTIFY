@@ -121,7 +121,14 @@ class NotificationService : NotificationListenerService() {
         }
         val packageName = sbn?.packageName ?: return
         val extras = sbn.notification?.extras ?: return
-
+        val syncWorkRequest = OneTimeWorkRequestBuilder<SyncWorker>()
+                        .setConstraints(constraints)
+                        .setBackoffCriteria(
+                            BackoffPolicy.LINEAR,
+                            5,
+                            java.util.concurrent.TimeUnit.MINUTES
+                        )
+                        .build()
         val title = extras.getString(Notification.EXTRA_TITLE) 
             ?: extras.getString(Notification.EXTRA_TITLE_BIG) 
             ?: "No Title"
