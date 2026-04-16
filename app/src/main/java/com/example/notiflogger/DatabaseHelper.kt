@@ -162,12 +162,22 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Notifs.db", 
         db.close()
     }
 
+    // FIXED: Only deletes logs older than 48 hours IF they have successfully synced
     fun deleteOldSyncedLogs() {
         val db = this.writableDatabase
-        val sevenDaysAgoMs = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000)
+        
+        // 48 Hours * 60 Mins * 60 Secs * 1000 Milliseconds
+        val fortyEightHoursAgoMs = System.currentTimeMillis() - (48L * 60 * 60 * 1000)
+        
         try {
-            db.delete("logs", "timestampMs < ? AND is_synced = 1", arrayOf(sevenDaysAgoMs.toString()))
-            db.delete("usage_logs", "timestampMs < ? AND is_synced = 1", arrayOf(sevenDaysAgoMs.toString()))
-        } catch (e: Exception) { e.printStackTrace() } finally { db.close() }
+            // RESTORED: Added "AND is_synced = 1" back to the queries
+            // This guarantees offline data is protected forever until it uploads.
+            db.delete("logs", "timestampMs < ? AND is_synced = 1", arrayOf(fortyEightHoursAgoMs.toString()))
+            db.delete("usage_logs", "timestampMs < ? AND is_synced = 1", arrayOf(fortyEightHoursAgoMs.toString()))
+        } catch (e: Exception) { 
+            e.printStackTrace() 
+        } finally { 
+            db.close() 
+        }
     }
 }
