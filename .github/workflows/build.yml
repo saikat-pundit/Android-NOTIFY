@@ -26,7 +26,7 @@ jobs:
     - name: Prepare Logo
       run: |
         mkdir -p app/src/main/res/drawable
-        cp logo.png app/src/main/res/drawable/logo.png || echo "Logo not found"
+        cp logo.png app/src/main/res/drawable/logo.png
 
     - name: Build with Gradle
       env:
@@ -44,7 +44,6 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         artifacts: "app/build/outputs/apk/debug/Calculator.apk"
-        tag: "latest"
         name: "Latest Build"
         allowUpdates: true        
         replacesArtifacts: true   
