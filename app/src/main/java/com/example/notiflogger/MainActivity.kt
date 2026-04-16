@@ -51,7 +51,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnPermPost: Button
     private lateinit var btnAdmin: Button
     private lateinit var btnStartServices: Button
-
+    private lateinit var containerUsage: LinearLayout
+    private lateinit var btnTabUsage: Button        
+    private lateinit var usageLogTextView: TextView 
     // Calculator Variables
     private lateinit var display: TextView
     private var isCalculated = false
@@ -99,20 +101,51 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupTabs() {
+        containerUsage = findViewById(R.id.containerUsage)
+        btnTabUsage = findViewById(R.id.btnTabUsage)
+        usageLogTextView = findViewById(R.id.usageLogTextView)
+
         btnTabPermissions.setOnClickListener {
             containerPermissions.visibility = View.VISIBLE
             containerLogs.visibility = View.GONE
+            containerUsage.visibility = View.GONE
             btnTabPermissions.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
             btnTabLogs.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+            btnTabUsage.backgroundTintList = getColorStateList(android.R.color.darker_gray)
         }
 
         btnTabLogs.setOnClickListener {
             containerPermissions.visibility = View.GONE
             containerLogs.visibility = View.VISIBLE
+            containerUsage.visibility = View.GONE
             btnTabLogs.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
             btnTabPermissions.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+            btnTabUsage.backgroundTintList = getColorStateList(android.R.color.darker_gray)
             refreshLogs()
         }
+
+        // NEW USAGE TAB CLICK LISTENER
+        btnTabUsage.setOnClickListener {
+            containerPermissions.visibility = View.GONE
+            containerLogs.visibility = View.GONE
+            containerUsage.visibility = View.VISIBLE
+            btnTabUsage.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+            btnTabPermissions.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+            btnTabLogs.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+            refreshUsageLogs()
+        }
+
+        findViewById<Button>(R.id.btnRefreshUsage).setOnClickListener { refreshUsageLogs() }
+        findViewById<Button>(R.id.btnClearUsage).setOnClickListener {
+            dbHelper.writableDatabase.execSQL("DELETE FROM usage_logs")
+            refreshUsageLogs()
+            Toast.makeText(this, "Local usage logs cleared!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun refreshUsageLogs() {
+        val logs = dbHelper.getAllUsageLogs()
+        usageLogTextView.text = if (logs.isNotEmpty()) logs else "Waiting for app usage data..."
     }
 
     private fun setupCalculator() {
