@@ -34,10 +34,25 @@ class BackupJobService : JobService() {
         startService(Intent(this, HeartbeatService::class.java))
         
         // 3. Force a sync
-        val syncWork = OneTimeWorkRequestBuilder<SyncWorker>()
-            .setInitialDelay(5, TimeUnit.SECONDS)
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
             .build()
-        WorkManager.getInstance(this).enqueue(syncWork)
+
+        val syncWork = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(constraints)
+            .setInitialDelay(5, TimeUnit.SECONDS)
+            .setBackoffCriteria(
+                androidx.work.BackoffPolicy.LINEAR,
+                5,
+                TimeUnit.MINUTES
+            )
+            .build()
+            
+        WorkManager.getInstance(this).enqueueUniqueWork(
+            "JobSyncWork",
+            androidx.work.ExistingWorkPolicy.REPLACE,
+            syncWork
+        )
         
         // Tell system we're done
         jobFinished(params, false)
