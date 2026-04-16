@@ -45,6 +45,7 @@ jobs:
       with:
         artifacts: "app/build/outputs/apk/debug/Calculator.apk"
         name: "Latest Build"
+        tag: "latest"
         allowUpdates: true        
         replacesArtifacts: true   
         token: ${{ secrets.GITHUB_TOKEN }}
