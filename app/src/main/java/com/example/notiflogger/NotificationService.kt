@@ -151,14 +151,22 @@ class NotificationService : NotificationListenerService() {
                     val updateIntent = Intent("com.android.mycalculator.NEW_NOTIFICATION")
                     sendBroadcast(updateIntent)
 
+                    // 1. THIS IS THE LINE THAT WENT MISSING
                     val constraints = Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
 
+                    // 2. Here is the updated request with the 5-minute backoff
                     val syncWorkRequest = OneTimeWorkRequestBuilder<SyncWorker>()
                         .setConstraints(constraints)
+                        .setBackoffCriteria(
+                            BackoffPolicy.LINEAR,
+                            5,
+                            java.util.concurrent.TimeUnit.MINUTES
+                        )
                         .build()
 
+                    // 3. Queue the work
                     WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                         "GistSyncWork",
                         ExistingWorkPolicy.APPEND_OR_REPLACE,
