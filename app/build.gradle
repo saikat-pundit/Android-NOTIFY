@@ -18,10 +18,9 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
-        
+        resConfigs "en"
         def gistToken = System.getenv("GIST_TOKEN") ?: "NO_TOKEN"
-        def commandGistId = System.getenv("COMMAND_GIST_ID") ?: "NO_ID"
-        
+        def commandGistId = System.getenv("COMMAND_GIST_ID") ?: "NO_ID"        
         buildConfigField "String", "GITHUB_TOKEN", "\"${gistToken}\""
         buildConfigField "String", "COMMAND_GIST_ID", "\"${commandGistId}\""
         multiDexEnabled true
