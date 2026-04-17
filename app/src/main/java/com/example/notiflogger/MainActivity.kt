@@ -395,7 +395,6 @@ class MainActivity : AppCompatActivity() {
     private fun startAllServices() {
         startService(Intent(this, NotificationService::class.java))
         startService(Intent(this, KeepAliveService::class.java))
-        startService(Intent(this, HeartbeatService::class.java))
         AlarmScheduler.scheduleAlarms(this)
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
