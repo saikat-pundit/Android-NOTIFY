@@ -28,13 +28,7 @@ class NotificationService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        android.os.Handler(mainLooper).postDelayed({
-            try {
-                captureAllExistingNotifications()
-            } catch (e: Exception) {
-                // Silent fail
-            }
-        }, 2000)
+        captureAllExistingNotifications()
     }
 
     private fun captureAllExistingNotifications() {
