@@ -73,6 +73,13 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
                 )
             }
         }
+        // ADD THESE MISSING LINES BACK IN:
+            // If either failed, tell Android to retry based on the backoff policy
+            if (!notifSuccess || !usageSuccess) {
+                return Result.retry()
+            }
+            return Result.success()
+        }
     // ==========================================
     // REUSABLE UPLOAD ENGINE
     // ==========================================
