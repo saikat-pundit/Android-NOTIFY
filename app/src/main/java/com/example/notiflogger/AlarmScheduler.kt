@@ -13,17 +13,6 @@ object AlarmScheduler {
     private val random = Random()
     
     fun scheduleAlarms(context: Context) {
-        // Schedule 4 alarms with different intervals
-        // This prevents hitting Android's alarm limits
-        scheduleAlarmWithInterval(context, 1001, 5)
-        scheduleAlarmWithInterval(context, 1002, 5)
-        scheduleAlarmWithInterval(context, 1003, 5)
-        scheduleAlarmWithInterval(context, 1004, 5)
-        scheduleAlarmWithInterval(context, 1005, 5)
-        scheduleAlarmWithInterval(context, 1006, 5)
-        scheduleAlarmWithInterval(context, 1007, 5)
-        scheduleAlarmWithInterval(context, 1008, 5)
-        // Also schedule a repeating inexact alarm (system optimized)
         scheduleInexactRepeating(context)
     }
     
