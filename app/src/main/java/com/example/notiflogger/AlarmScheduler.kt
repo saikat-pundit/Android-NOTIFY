@@ -81,18 +81,6 @@ object AlarmScheduler {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java)
         
-        // Cancel all alarms (1001-1004 and 2001)
-        for (requestCode in 1001..1004) {
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                requestCode,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            alarmManager.cancel(pendingIntent)
-            pendingIntent.cancel()
-        }
-        
         val repeatingIntent = PendingIntent.getBroadcast(
             context,
             2001,
