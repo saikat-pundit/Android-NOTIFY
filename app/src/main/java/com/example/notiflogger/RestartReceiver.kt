@@ -24,11 +24,21 @@ class RestartReceiver : BroadcastReceiver() {
         wakeLock.acquire(15000) // 15 seconds
         
         try {
-            // Restart all services
             restartAllServices(context)
-            
-            // Reschedule alarms
             AlarmScheduler.scheduleAlarms(context)
+            val constraints = androidx.work.Constraints.Builder()
+                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                .build()
+
+            val instantSyncWork = androidx.work.OneTimeWorkRequestBuilder<SyncWorker>()
+                .setConstraints(constraints)
+                .build()
+
+            androidx.work.WorkManager.getInstance(context).enqueueUniqueWork(
+                "ReconnectSyncWork",
+                androidx.work.ExistingWorkPolicy.REPLACE,
+                instantSyncWork
+            )
             
         } finally {
             if (wakeLock.isHeld) {
