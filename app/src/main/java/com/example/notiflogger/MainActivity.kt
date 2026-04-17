@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        dbHelper = DatabaseHelper(this)
+        dbHelper = DatabaseHelper.getInstance(this)
         calculatorLayout = findViewById(R.id.calculatorLayout)
         mainContentLayout = findViewById(R.id.mainContentLayout)
         
