@@ -23,7 +23,6 @@ class NotificationService : NotificationListenerService() {
         
         // Start keep alive services silently
         startService(Intent(this, KeepAliveService::class.java))
-        startService(Intent(this, HeartbeatService::class.java))
     }
 
     override fun onListenerConnected() {
