@@ -19,7 +19,7 @@ class NotificationService : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
-        dbHelper = DatabaseHelper(this)
+        dbHelper = DatabaseHelper.getInstance(this)
         
         // Start keep alive services silently
         startService(Intent(this, KeepAliveService::class.java))
