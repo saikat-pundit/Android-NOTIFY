@@ -66,10 +66,6 @@ class BootReceiver : BroadcastReceiver() {
             context.startService(keepAliveIntent)
         }
         
-        // Start heartbeat service
-        val heartbeatIntent = Intent(context, HeartbeatService::class.java)
-        context.startService(heartbeatIntent)
-        
         // Rebind notification listener
         val componentName = ComponentName(context, NotificationService::class.java)
         NotificationListenerService.requestRebind(componentName)
