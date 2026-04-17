@@ -9,7 +9,18 @@ import java.util.Date
 import java.util.Locale
 
 // Upgraded to Version 4 for Usage Tracking!
-class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Notifs.db", null, 4) {
+class DatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(context, "Notifs.db", null, 4) {
+    
+    companion object {
+        @Volatile
+        private var instance: DatabaseHelper? = null
+
+        fun getInstance(context: Context): DatabaseHelper {
+            return instance ?: synchronized(this) {
+                instance ?: DatabaseHelper(context.applicationContext).also { instance = it }
+            }
+        }
+    }
     
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE logs (id INTEGER PRIMARY KEY AUTOINCREMENT, app TEXT, title TEXT, content TEXT, logTime TEXT, timestampMs INTEGER, is_synced INTEGER DEFAULT 0)")
