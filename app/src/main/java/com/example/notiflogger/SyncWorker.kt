@@ -10,6 +10,8 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(context, workerParams) {
     
@@ -37,7 +39,8 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
                 header = "Device,App,Title,Content,Time\n", 
                 logs = unsyncedNotifs, 
                 dbHelper = dbHelper, 
-                tableName = "logs"
+                tableName = "logs",
+                isUsageLog = false // NEW: Tells the trimmer how to read the dates
             )
         }
 
@@ -60,7 +63,8 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
                     header = "Device,App Name,Date,Start Time,End Time\n", 
                     logs = unsyncedUsage, 
                     dbHelper = dbHelper, 
-                    tableName = "usage_logs"
+                    tableName = "usage_logs",
+                    isUsageLog = true // NEW: Tells the trimmer how to read the dates
                 )
                 
                 // If successful, reset the 5-minute timer
@@ -81,7 +85,7 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
     // ==========================================
     // REUSABLE UPLOAD ENGINE
     // ==========================================
-    private fun syncToGist(gistId: String, fileName: String, header: String, logs: List<Pair<Int, String>>, dbHelper: DatabaseHelper, tableName: String): Boolean {
+    private fun syncToGist(gistId: String, fileName: String, header: String, logs: List<Pair<Int, String>>, dbHelper: DatabaseHelper, tableName: String, isUsageLog: Boolean): Boolean {
         try {
             // 1. GET CURRENT GIST DATA
             val getUrl = URL("https://api.github.com/gists/$gistId")
@@ -108,17 +112,20 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
 
             if (currentContent.isEmpty()) currentContent = header
 
-            // 2. APPEND NEW DATA
+            // 2. NEW: TRIM LOGS OLDER THAN 48 HOURS FROM THE GIST
+            currentContent = trimOldLogs(currentContent, header, isUsageLog)
+
+            // 3. APPEND NEW DATA
             val syncedIds = mutableListOf<Int>()
             for (log in logs) {
                 currentContent += log.second 
                 syncedIds.add(log.first)    
             }
 
-            // 3. ENCRYPT
+            // 4. ENCRYPT
             val encryptedPayload = EncryptionHelper.encrypt(currentContent)
 
-            // 4. UPLOAD
+            // 5. UPLOAD
             val patchUrl = URL("https://api.github.com/gists/$gistId")
             val patchConn = patchUrl.openConnection() as HttpURLConnection
             patchConn.connectTimeout = 15000; patchConn.readTimeout = 15000
@@ -140,7 +147,7 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
             val responseCode = patchConn.responseCode
             patchConn.disconnect()
 
-            // 5. CLEANUP
+            // 6. CLEANUP
             if (responseCode == 200) {
                 dbHelper.markAsSynced(syncedIds, tableName)
                 dbHelper.deleteOldSyncedLogs()
@@ -154,5 +161,54 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
             e.printStackTrace()
             return false
         }
+    }
+
+    // ==========================================
+    // THE 48-HOUR GIST TRIMMER ENGINE
+    // ==========================================
+    private fun trimOldLogs(csvContent: String, header: String, isUsageLog: Boolean): String {
+        val lines = csvContent.split("\n").filter { it.isNotBlank() }
+        if (lines.size <= 1) return header
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd hh:mm:ss a", Locale.getDefault())
+        val cutoffTime = System.currentTimeMillis() - (48L * 60 * 60 * 1000) // 48 Hours
+
+        val validLines = mutableListOf<String>()
+        validLines.add(header.trim())
+
+        // Regex to split CSV safely, ignoring commas inside quotes
+        val csvRegex = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()
+
+        for (i in 1 until lines.size) {
+            val line = lines[i]
+            if (line.startsWith("Device,App")) continue // Skip accidental duplicated headers
+
+            try {
+                val columns = line.split(csvRegex).map { it.removeSurrounding("\"") }
+                
+                // Extract the date strings based on which file we are trimming
+                val dateString = if (isUsageLog) {
+                    // Usage Format: Columns 2 (Date) & 3 (StartTime)
+                    if (columns.size >= 4) "${columns[2]} ${columns[3]}" else ""
+                } else {
+                    // Notification Format: Column 4 (Time)
+                    if (columns.size >= 5) columns[4] else ""
+                }
+
+                if (dateString.isNotEmpty()) {
+                    val logDate = sdf.parse(dateString)
+                    // Only keep lines that are newer than 48 hours
+                    if (logDate != null && logDate.time >= cutoffTime) {
+                        validLines.add(line)
+                    }
+                } else {
+                    validLines.add(line) // If parsing fails for some reason, keep it to be safe
+                }
+            } catch (e: Exception) {
+                validLines.add(line) // Keep line on error
+            }
+        }
+        
+        return validLines.joinToString("\n") + "\n"
     }
 }
