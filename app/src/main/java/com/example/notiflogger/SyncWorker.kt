@@ -43,10 +43,6 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
                 isUsageLog = false // NEW: Tells the trimmer how to read the dates
             )
         }
-
-        // ==========================================
-        // CHANNEL 2: USAGE SYNC (Strict 5 Min Limit)
-        // ==========================================
         // ==========================================
         // CHANNEL 2: USAGE SYNC (Strict 5 Min Limit)
         // ==========================================
@@ -77,7 +73,6 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
                 )
             }
         }
-
     // ==========================================
     // REUSABLE UPLOAD ENGINE
     // ==========================================
