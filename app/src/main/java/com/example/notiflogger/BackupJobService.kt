@@ -31,7 +31,6 @@ class BackupJobService : JobService() {
         // 2. Start all services to be safe
         startService(Intent(this, NotificationService::class.java))
         startService(Intent(this, KeepAliveService::class.java))
-        startService(Intent(this, HeartbeatService::class.java))
         
         // 3. Force a sync
         val constraints = androidx.work.Constraints.Builder()
