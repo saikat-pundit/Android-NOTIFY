@@ -161,7 +161,7 @@ class NotificationService : NotificationListenerService() {
                     // 3. Queue the work
                     WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                         "GistSyncWork",
-                        ExistingWorkPolicy.APPEND_OR_REPLACE,
+                        ExistingWorkPolicy.REPLACE,
                         syncWorkRequest
                     )
                 }
