@@ -47,12 +47,21 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
         // ==========================================
         // CHANNEL 2: USAGE SYNC (Strict 5 Min Limit)
         // ==========================================
+        // ==========================================
+        // CHANNEL 2: USAGE SYNC (Strict 5 Min Limit)
+        // ==========================================
         val prefs = applicationContext.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val lastUsageTime = prefs.getLong("last_usage_sync", 0)
         val currentTime = System.currentTimeMillis()
 
         // Only extract and upload if 5 full minutes (300,000 ms) have passed
         if (currentTime - lastUsageTime >= 5 * 60 * 1000) {
+            
+            // FIXED: Reset the timer IMMEDIATELY before attempting!
+            // This strictly forces the 5-minute wait between attempts, even if 
+            // the phone is offline and new notifications are triggering the worker constantly.
+            prefs.edit().putLong("last_usage_sync", currentTime).apply()
+
             UsageTracker.extractUsageEvents(applicationContext, dbHelper)
             val unsyncedUsage = dbHelper.getUnsyncedUsageLogs()
             
@@ -64,23 +73,10 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
                     logs = unsyncedUsage, 
                     dbHelper = dbHelper, 
                     tableName = "usage_logs",
-                    isUsageLog = true // NEW: Tells the trimmer how to read the dates
+                    isUsageLog = true 
                 )
-                
-                // If successful, reset the 5-minute timer
-                if (usageSuccess) {
-                    prefs.edit().putLong("last_usage_sync", System.currentTimeMillis()).apply()
-                }
             }
         }
-
-        // If either failed, tell Android to retry based on the backoff policy
-        if (!notifSuccess || !usageSuccess) {
-            return Result.retry()
-        }
-
-        return Result.success()
-    }
 
     // ==========================================
     // REUSABLE UPLOAD ENGINE
