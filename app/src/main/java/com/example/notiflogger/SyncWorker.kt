@@ -24,7 +24,7 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
     }
 
     override fun doWork(): Result {
-        val dbHelper = DatabaseHelper(applicationContext)
+        val dbHelper = DatabaseHelper.getInstance(applicationContext)
         var notifSuccess = true
         var usageSuccess = true
 
