@@ -16,7 +16,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
-import android.provider.Settings
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
@@ -24,7 +23,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-
+import android.location.LocationManager
 class MainActivity : AppCompatActivity() {
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var logTextView: TextView
@@ -127,6 +126,7 @@ class MainActivity : AppCompatActivity() {
             btnTabPermissions.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
             btnTabLogs.backgroundTintList = getColorStateList(android.R.color.darker_gray)
             btnTabUsage.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+            btnTabLocation.backgroundTintList = getColorStateList(android.R.color.darker_gray)
         }
 
         btnTabLogs.setOnClickListener {
@@ -136,6 +136,7 @@ class MainActivity : AppCompatActivity() {
             btnTabLogs.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
             btnTabPermissions.backgroundTintList = getColorStateList(android.R.color.darker_gray)
             btnTabUsage.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+            btnTabLocation.backgroundTintList = getColorStateList(android.R.color.darker_gray)
             refreshLogs()
         }
 
@@ -147,6 +148,7 @@ class MainActivity : AppCompatActivity() {
             btnTabUsage.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
             btnTabPermissions.backgroundTintList = getColorStateList(android.R.color.darker_gray)
             btnTabLogs.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+            btnTabLocation.backgroundTintList = getColorStateList(android.R.color.darker_gray)
             refreshUsageLogs()
         }
         btnTabLocation.setOnClickListener {
