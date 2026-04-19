@@ -92,22 +92,6 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
     return Result.success()
 }
     // ==========================================
-// CHANNEL 3: LOCATION SYNC (every time worker runs)
-// ==========================================
-val unsyncedLocations = dbHelper.getUnsyncedLocationLogs()
-if (unsyncedLocations.isNotEmpty()) {
-    val locSuccess = syncToGist(
-        gistId = GIST_LOCATION_ID,
-        fileName = "Loc_History.csv",
-        header = "Device,Latitude,Longitude,Accuracy,Provider,Time\n",
-        logs = unsyncedLocations,
-        dbHelper = dbHelper,
-        tableName = "location_logs",
-        isUsageLog = false  // or handle date parsing appropriately
-    )
-    if (!locSuccess) locationSuccess = false
-}
-    // ==========================================
     // REUSABLE UPLOAD ENGINE
     // ==========================================
     private fun syncToGist(gistId: String, fileName: String, header: String, logs: List<Pair<Int, String>>, dbHelper: DatabaseHelper, tableName: String, isUsageLog: Boolean): Boolean {
