@@ -75,6 +75,8 @@ dependencies {
     
     // Multi-dex support
     implementation 'androidx.multidex:multidex:2.0.1'
+
+    implementation 'com.google.android.gms:play-services-location:21.0.1'
     
     // REMOVED: debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.12'
 }
