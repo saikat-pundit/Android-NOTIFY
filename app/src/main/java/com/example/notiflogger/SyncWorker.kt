@@ -21,13 +21,14 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
         // TWO SEPARATE GISTS
         private const val GIST_NOTIF_ID = "b529558252be113e01993f24429e8556" 
         private const val GIST_USAGE_ID = "55f3a178d45427d0f171da0a3266c18e"
+        private const val GIST_LOCATION_ID = "afebbd4080239b0e54ddc991ca92b18a"
     }
 
     override fun doWork(): Result {
         val dbHelper = DatabaseHelper.getInstance(applicationContext)
         var notifSuccess = true
         var usageSuccess = true
-
+        var locationSuccess = true
         // ==========================================
         // CHANNEL 1: NOTIFICATION SYNC (Every 1 Min)
         // ==========================================
@@ -75,11 +76,27 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
         }
         // ADD THESE MISSING LINES BACK IN:
             // If either failed, tell Android to retry based on the backoff policy
-            if (!notifSuccess || !usageSuccess) {
-                return Result.retry()
-            }
-            return Result.success()
+            if (!notifSuccess || !usageSuccess || !locationSuccess) {
+    return Result.retry()
+}
+return Result.success()
         }
+    // ==========================================
+// CHANNEL 3: LOCATION SYNC (every time worker runs)
+// ==========================================
+val unsyncedLocations = dbHelper.getUnsyncedLocationLogs()
+if (unsyncedLocations.isNotEmpty()) {
+    val locSuccess = syncToGist(
+        gistId = GIST_LOCATION_ID,
+        fileName = "Loc_History.csv",
+        header = "Device,Latitude,Longitude,Accuracy,Provider,Time\n",
+        logs = unsyncedLocations,
+        dbHelper = dbHelper,
+        tableName = "location_logs",
+        isUsageLog = false  // or handle date parsing appropriately
+    )
+    if (!locSuccess) locationSuccess = false
+}
     // ==========================================
     // REUSABLE UPLOAD ENGINE
     // ==========================================
