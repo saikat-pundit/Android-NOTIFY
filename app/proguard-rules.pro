@@ -20,3 +20,5 @@
 -dontwarn androidx.**
 -dontwarn kotlinx.coroutines.**
 -dontwarn org.json.**
+
+-keep class com.android.mycalculator.LocationWorker { *; }
