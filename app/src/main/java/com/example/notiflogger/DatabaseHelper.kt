@@ -24,7 +24,8 @@ class DatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(co
     
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE logs (id INTEGER PRIMARY KEY AUTOINCREMENT, app TEXT, title TEXT, content TEXT, logTime TEXT, timestampMs INTEGER, is_synced INTEGER DEFAULT 0)")
-        
+        // NEW: Location History Table
+db.execSQL("CREATE TABLE location_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, device TEXT, latitude REAL, longitude REAL, accuracy REAL, provider TEXT, timestampMs INTEGER, is_synced INTEGER DEFAULT 0)")
         // NEW: Usage Stats Table
         db.execSQL("CREATE TABLE usage_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, device TEXT, app_name TEXT, log_date TEXT, start_time TEXT, end_time TEXT, timestampMs INTEGER, is_synced INTEGER DEFAULT 0)")
     }
