@@ -5,34 +5,33 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
-import android.os.Looper
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.work.*
 import com.google.android.gms.location.*
-import java.util.concurrent.TimeUnit
 import com.google.android.gms.tasks.Tasks
+import java.util.concurrent.TimeUnit
+
 class LocationWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
     override fun doWork(): Result {
         // Check permissions first
         if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
             ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("LocationWorker", "Location permission not granted")
             return Result.failure()
         }
 
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
-            .setMinUpdateIntervalMillis(4000)
-            .build()
-
-        // Use a blocking call to get the last known location (or request a single update)
+        
         var location: Location? = null
-try {
-    val locationTask = fusedLocationClient.lastLocation
-    location = com.google.android.gms.tasks.Tasks.await(locationTask, 10, TimeUnit.SECONDS)
-} catch (e: Exception) {
-    e.printStackTrace()
-}
+        try {
+            // Get last known location with a 10-second timeout
+            val locationTask = fusedLocationClient.lastLocation
+            location = Tasks.await(locationTask, 10, TimeUnit.SECONDS)
+        } catch (e: Exception) {
+            Log.e("LocationWorker", "Failed to get location", e)
+        }
 
         if (location != null) {
             val dbHelper = DatabaseHelper.getInstance(applicationContext)
@@ -45,8 +44,9 @@ try {
                 location.provider ?: "unknown",
                 System.currentTimeMillis()
             )
+            Log.d("LocationWorker", "Location saved: ${location.latitude}, ${location.longitude}")
 
-            // Trigger sync (same way NotificationService does)
+            // Trigger sync
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -59,6 +59,8 @@ try {
                 ExistingWorkPolicy.REPLACE,
                 syncWork
             )
+        } else {
+            Log.w("LocationWorker", "Location was null, will retry in 5 minutes")
         }
 
         // Schedule the next run in 5 minutes
