@@ -58,7 +58,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var display: TextView
     private var isCalculated = false
     private var lastResult = ""
-
+    private lateinit var containerLocation: LinearLayout
+    private lateinit var btnTabLocation: Button
+    private lateinit var locationLogTextView: TextView
     private val logUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             refreshLogs()
@@ -68,7 +70,9 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
+        containerLocation = findViewById(R.id.containerLocation)
+        btnTabLocation = findViewById(R.id.btnTabLocation)
+        locationLogTextView = findViewById(R.id.locationLogTextView)
         dbHelper = DatabaseHelper.getInstance(this)
         calculatorLayout = findViewById(R.id.calculatorLayout)
         mainContentLayout = findViewById(R.id.mainContentLayout)
