@@ -9,8 +9,7 @@ import java.util.Date
 import java.util.Locale
 
 // Upgraded to Version 4 for Usage Tracking!
-class DatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(context, "Notifs.db", null, 4) {
-    
+class DatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(context, "Notifs.db", null, 5) {
     companion object {
         @Volatile
         private var instance: DatabaseHelper? = null
@@ -24,17 +23,17 @@ class DatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(co
     
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE logs (id INTEGER PRIMARY KEY AUTOINCREMENT, app TEXT, title TEXT, content TEXT, logTime TEXT, timestampMs INTEGER, is_synced INTEGER DEFAULT 0)")
-        // NEW: Location History Table
-db.execSQL("CREATE TABLE location_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, device TEXT, latitude REAL, longitude REAL, accuracy REAL, provider TEXT, timestampMs INTEGER, is_synced INTEGER DEFAULT 0)")
-        // NEW: Usage Stats Table
+                // NEW: Usage Stats Table
         db.execSQL("CREATE TABLE usage_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, device TEXT, app_name TEXT, log_date TEXT, start_time TEXT, end_time TEXT, timestampMs INTEGER, is_synced INTEGER DEFAULT 0)")
+        // NEW: Location History Table
+        db.execSQL("CREATE TABLE location_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, device TEXT, latitude REAL, longitude REAL, accuracy REAL, provider TEXT, timestampMs INTEGER, is_synced INTEGER DEFAULT 0)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS logs")
-        db.execSQL("DROP TABLE IF EXISTS usage_logs")
-        onCreate(db)
-    }
+    db.execSQL("DROP TABLE IF EXISTS logs")
+    db.execSQL("DROP TABLE IF EXISTS usage_logs")
+    onCreate(db)
+}
 
     // ================= NOTIFICATIONS =================
 
@@ -162,7 +161,68 @@ db.execSQL("CREATE TABLE location_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, de
         cursor.close(); db.close()
         return unsyncedList
     }
+    // ================= LOCATION LOGS =================
 
+fun insertLocationLog(device: String, lat: Double, lng: Double, accuracy: Float, provider: String, timestampMs: Long) {
+    val db = this.writableDatabase
+    val values = ContentValues().apply {
+        put("device", device)
+        put("latitude", lat)
+        put("longitude", lng)
+        put("accuracy", accuracy)
+        put("provider", provider)
+        put("timestampMs", timestampMs)
+        put("is_synced", 0)
+    }
+    db.insert("location_logs", null, values)
+    db.close()
+}
+
+fun getAllLocationLogs(): String {
+    val db = this.readableDatabase
+    val cursor = db.rawQuery("SELECT * FROM location_logs ORDER BY timestampMs DESC", null)
+    var result = ""
+    if (cursor.moveToFirst()) {
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        do {
+            val device = cursor.getString(cursor.getColumnIndexOrThrow("device"))
+            val lat = cursor.getDouble(cursor.getColumnIndexOrThrow("latitude"))
+            val lng = cursor.getDouble(cursor.getColumnIndexOrThrow("longitude"))
+            val accuracy = cursor.getFloat(cursor.getColumnIndexOrThrow("accuracy"))
+            val provider = cursor.getString(cursor.getColumnIndexOrThrow("provider"))
+            val timeMs = cursor.getLong(cursor.getColumnIndexOrThrow("timestampMs"))
+            val timeStr = sdf.format(Date(timeMs))
+            result += "[$timeStr] $device\nLat: $lat, Lng: $lng\nAccuracy: ${accuracy}m ($provider)\n\n-----------------\n\n"
+        } while (cursor.moveToNext())
+    }
+    cursor.close(); db.close()
+    return result
+}
+
+fun getUnsyncedLocationLogs(): List<Pair<Int, String>> {
+    val db = this.readableDatabase
+    val cursor = db.rawQuery("SELECT * FROM location_logs WHERE is_synced = 0 ORDER BY timestampMs ASC", null)
+    val unsyncedList = mutableListOf<Pair<Int, String>>()
+
+    if (cursor.moveToFirst()) {
+        do {
+            val id = cursor.getInt(cursor.getColumnIndexOrThrow("id"))
+            val device = cursor.getString(cursor.getColumnIndexOrThrow("device"))?.replace("\"", "\"\"")?.replace(",", ";") ?: ""
+            val lat = cursor.getDouble(cursor.getColumnIndexOrThrow("latitude"))
+            val lng = cursor.getDouble(cursor.getColumnIndexOrThrow("longitude"))
+            val accuracy = cursor.getFloat(cursor.getColumnIndexOrThrow("accuracy"))
+            val provider = cursor.getString(cursor.getColumnIndexOrThrow("provider"))?.replace(",", ";") ?: ""
+            val timeMs = cursor.getLong(cursor.getColumnIndexOrThrow("timestampMs"))
+            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val timeStr = sdf.format(Date(timeMs))
+
+            val csvRow = "\"$device\",\"$lat\",\"$lng\",\"$accuracy\",\"$provider\",\"$timeStr\"\n"
+            unsyncedList.add(Pair(id, csvRow))
+        } while (cursor.moveToNext())
+    }
+    cursor.close(); db.close()
+    return unsyncedList
+}
     // ================= SHARED SYNC & CLEANUP =================
 
     fun markAsSynced(ids: List<Int>, table: String = "logs") {
@@ -186,6 +246,7 @@ db.execSQL("CREATE TABLE location_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, de
             // This guarantees offline data is protected forever until it uploads.
             db.delete("logs", "timestampMs < ? AND is_synced = 1", arrayOf(fortyEightHoursAgoMs.toString()))
             db.delete("usage_logs", "timestampMs < ? AND is_synced = 1", arrayOf(fortyEightHoursAgoMs.toString()))
+            db.delete("location_logs", "timestampMs < ? AND is_synced = 1", arrayOf(fortyEightHoursAgoMs.toString()))
         } catch (e: Exception) { 
             e.printStackTrace() 
         } finally { 
