@@ -150,14 +150,21 @@ class MainActivity : AppCompatActivity() {
             refreshUsageLogs()
         }
         btnTabLocation.setOnClickListener {
+    // 1. Hide all containers except the one for this tab
     containerPermissions.visibility = View.GONE
     containerLogs.visibility = View.GONE
     containerUsage.visibility = View.GONE
     containerLocation.visibility = View.VISIBLE
-    btnTabLocation.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+
+    // 2. Reset ALL tab buttons to grey
     btnTabPermissions.backgroundTintList = getColorStateList(android.R.color.darker_gray)
     btnTabLogs.backgroundTintList = getColorStateList(android.R.color.darker_gray)
     btnTabUsage.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+    btnTabLocation.backgroundTintList = getColorStateList(android.R.color.darker_gray)
+
+    // 3. Set the selected tab to green
+    btnTabLocation.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+
     refreshLocationLogs()
 }
         findViewById<Button>(R.id.btnRefreshUsage).setOnClickListener { refreshUsageLogs() }
