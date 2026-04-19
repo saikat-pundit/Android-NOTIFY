@@ -110,6 +110,16 @@
                 android:textColor="#FFFFFF"
                 android:layout_marginStart="2dp"
                 android:textSize="12sp"/>
+            <Button
+    android:id="@+id/btnTabLocation"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:text="Location"
+    android:backgroundTint="#333333"
+    android:textColor="#FFFFFF"
+    android:layout_marginStart="2dp"
+    android:textSize="12sp"/>
         </LinearLayout>
 
         <ScrollView
@@ -231,6 +241,52 @@
                     android:text="🗑️ Clear Local" />
             </LinearLayout>
         </LinearLayout>
+        <LinearLayout
+    android:id="@+id/containerLocation"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:visibility="gone">
 
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginBottom="8dp">
+        <TextView
+            android:id="@+id/locationLogTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#E0E0E0"
+            android:fontFamily="monospace"
+            android:textSize="13sp"
+            android:text="Waiting for location data..."/>
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/btnRefreshLocation"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:backgroundTint="#222222"
+            android:textColor="#FFFFFF"
+            android:text="Refresh"/>
+        <Button
+            android:id="@+id/btnClearLocation"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:backgroundTint="#8B0000"
+            android:textColor="#FFFFFF"
+            android:text="Clear Local"/>
+    </LinearLayout>
+</LinearLayout>
+        
     </LinearLayout>
 </RelativeLayout>
