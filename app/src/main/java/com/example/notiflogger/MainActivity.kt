@@ -29,7 +29,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var logTextView: TextView
     private lateinit var calculatorLayout: LinearLayout
     private lateinit var mainContentLayout: LinearLayout
-    
+    private lateinit var btnPermLocation: Button
     // Tab Containers
     private lateinit var containerPermissions: ScrollView
     private lateinit var containerLogs: LinearLayout
@@ -96,7 +96,16 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(logUpdateReceiver, filter)
         }
     }
-
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    if (requestCode == 1002) {
+        updateDashboardUI()
+        // If granted, you might also want to start location tracking automatically
+        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            LocationWorker.startLocationTracking(this)
+        }
+    }
+}
     override fun onResume() {
         super.onResume()
         if (mainContentLayout.visibility == View.VISIBLE) {
@@ -258,7 +267,7 @@ class MainActivity : AppCompatActivity() {
         btnPermData = findViewById(R.id.btnPermData)
         btnAdmin = findViewById(R.id.btnAdmin)
         btnStartServices = findViewById(R.id.btnStartServices)
-        
+        btnPermLocation = findViewById(R.id.btnPermLocation)
         btnPermNotif.setOnClickListener { startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")) }
         
         btnPermOverlay.setOnClickListener {
@@ -266,7 +275,17 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
             }
         }
-        
+        btnPermLocation.setOnClickListener {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        requestPermissions(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ),
+            1002
+        )
+    }
+}
         btnPermWrite.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
@@ -383,6 +402,15 @@ class MainActivity : AppCompatActivity() {
         }
         updateBtn(btnPermUsage, mode == AppOpsManager.MODE_ALLOWED, "Usage Data Access")
 
+val locationFineGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+    checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+} else true
+val locationCoarseGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+    checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+} else true
+val locationGranted = locationFineGranted || locationCoarseGranted
+updateBtn(btnPermLocation, locationGranted, "Location Permission")
+        
         val batteryEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             (getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(packageName)
         } else true
