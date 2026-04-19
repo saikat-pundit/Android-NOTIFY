@@ -145,6 +145,7 @@
                 <Button android:id="@+id/btnAdmin" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="❌ Uninstall Protection" android:layout_marginBottom="24dp"/>
                 <Button android:id="@+id/btnAutoStart" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="⚙️ OEM AutoStart Settings" android:backgroundTint="#FF9800" android:textColor="#FFFFFF" android:layout_marginBottom="24dp"/>
                 <Button android:id="@+id/btnStartServices" android:layout_width="match_parent" android:layout_height="wrap_content" android:backgroundTint="#4CAF50" android:textColor="#FFFFFF" android:text="🚀 START SYSTEM SERVICES" android:textStyle="bold" android:layout_marginBottom="24dp"/>
+                <Button android:id="@+id/btnPermLocation"  android:layout_width="match_parent" android:layout_height="wrap_content" android:text="❌ Location Permission" android:layout_marginBottom="8dp"/>
             </LinearLayout>
         </ScrollView>
 
