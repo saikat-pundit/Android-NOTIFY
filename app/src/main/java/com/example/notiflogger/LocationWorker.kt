@@ -140,10 +140,10 @@ class LocationWorker(context: Context, params: WorkerParameters) : Worker(contex
 
         // Check if any provider is enabled
         if (!locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) && 
-            !locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            Log.w(TAG, "No location provider enabled")
-            return null
-        }
+    !locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+    Log.w(TAG, "No location provider enabled")
+    return null
+}
 
         // Try NETWORK_PROVIDER (coarse) first
         var location = getLastKnownLocationFromManager(locationManager, LocationManager.NETWORK_PROVIDER)
