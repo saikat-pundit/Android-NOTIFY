@@ -80,29 +80,18 @@ class LocationWorker(context: Context, params: WorkerParameters) : Worker(contex
      * Falls back to last known location if fresh not available.
      */
     private fun getLocationFromFusedProvider(): Location? {
-        return try {
-            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
-            
-            // First try last known location (fast)
-            val lastLocationTask = fusedLocationClient.lastLocation
-            var location = Tasks.await(lastLocationTask, LOCATION_TIMEOUT_SEC, TimeUnit.SECONDS)
-            
-            if (location != null) {
-                Log.d(TAG, "Got location from Fused provider (last known): ${location.latitude}, ${location.longitude}")
-                return location
-            }
-
-            // If last known is null, request a single fresh update (blocking)
-            location = getFreshLocationFromFusedProvider(fusedLocationClient)
-            if (location != null) {
-                Log.d(TAG, "Got fresh location from Fused provider: ${location.latitude}, ${location.longitude}")
-            }
-            location
-        } catch (e: Exception) {
-            Log.e(TAG, "Fused provider failed", e)
-            null
+    return try {
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
+        val location = getFreshLocationFromFusedProvider(fusedLocationClient)
+        if (location != null) {
+            Log.d(TAG, "Got fresh location from Fused provider: ...")
         }
+        location
+    } catch (e: Exception) {
+        Log.e(TAG, "Fused provider failed", e)
+        null
     }
+}
 
     /**
      * Requests a single fresh location update using Fused provider with HIGH_ACCURACY.
