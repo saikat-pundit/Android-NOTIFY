@@ -25,62 +25,72 @@ class SyncWorker(context: Context, workerParams: WorkerParameters) : Worker(cont
     }
 
     override fun doWork(): Result {
-        val dbHelper = DatabaseHelper.getInstance(applicationContext)
-        var notifSuccess = true
-        var usageSuccess = true
-        var locationSuccess = true
-        // ==========================================
-        // CHANNEL 1: NOTIFICATION SYNC (Every 1 Min)
-        // ==========================================
-        val unsyncedNotifs = dbHelper.getUnsyncedLogs()
-        if (unsyncedNotifs.isNotEmpty()) {
-            notifSuccess = syncToGist(
-                gistId = GIST_NOTIF_ID, 
-                fileName = "notifications.csv", 
-                header = "Device,App,Title,Content,Time\n", 
-                logs = unsyncedNotifs, 
-                dbHelper = dbHelper, 
-                tableName = "logs",
-                isUsageLog = false // NEW: Tells the trimmer how to read the dates
+    val dbHelper = DatabaseHelper.getInstance(applicationContext)
+    var notifSuccess = true
+    var usageSuccess = true
+    var locationSuccess = true   // <-- ADD THIS
+
+    // ==========================================
+    // CHANNEL 1: NOTIFICATION SYNC (Every 1 Min)
+    // ==========================================
+    val unsyncedNotifs = dbHelper.getUnsyncedLogs()
+    if (unsyncedNotifs.isNotEmpty()) {
+        notifSuccess = syncToGist(
+            gistId = GIST_NOTIF_ID,
+            fileName = "notifications.csv",
+            header = "Device,App,Title,Content,Time\n",
+            logs = unsyncedNotifs,
+            dbHelper = dbHelper,
+            tableName = "logs",
+            isUsageLog = false
+        )
+    }
+
+    // ==========================================
+    // CHANNEL 2: USAGE SYNC (Strict 5 Min Limit)
+    // ==========================================
+    val prefs = applicationContext.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+    val lastUsageTime = prefs.getLong("last_usage_sync", 0)
+    val currentTime = System.currentTimeMillis()
+
+    if (currentTime - lastUsageTime >= 5 * 60 * 1000) {
+        prefs.edit().putLong("last_usage_sync", currentTime).apply()
+        UsageTracker.extractUsageEvents(applicationContext, dbHelper)
+        val unsyncedUsage = dbHelper.getUnsyncedUsageLogs()
+        if (unsyncedUsage.isNotEmpty()) {
+            usageSuccess = syncToGist(
+                gistId = GIST_USAGE_ID,
+                fileName = "usage_stats.csv",
+                header = "Device,App Name,Date,Start Time,End Time\n",
+                logs = unsyncedUsage,
+                dbHelper = dbHelper,
+                tableName = "usage_logs",
+                isUsageLog = true
             )
         }
-        // ==========================================
-        // CHANNEL 2: USAGE SYNC (Strict 5 Min Limit)
-        // ==========================================
-        val prefs = applicationContext.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
-        val lastUsageTime = prefs.getLong("last_usage_sync", 0)
-        val currentTime = System.currentTimeMillis()
+    }
 
-        // Only extract and upload if 5 full minutes (300,000 ms) have passed
-        if (currentTime - lastUsageTime >= 5 * 60 * 1000) {
-            
-            // FIXED: Reset the timer IMMEDIATELY before attempting!
-            // This strictly forces the 5-minute wait between attempts, even if 
-            // the phone is offline and new notifications are triggering the worker constantly.
-            prefs.edit().putLong("last_usage_sync", currentTime).apply()
+    // ==========================================
+    // CHANNEL 3: LOCATION SYNC (NEW)
+    // ==========================================
+    val unsyncedLocations = dbHelper.getUnsyncedLocationLogs()
+    if (unsyncedLocations.isNotEmpty()) {
+        locationSuccess = syncToGist(
+            gistId = GIST_LOCATION_ID,
+            fileName = "Loc_History.csv",
+            header = "Device,Latitude,Longitude,Accuracy,Provider,Time\n",
+            logs = unsyncedLocations,
+            dbHelper = dbHelper,
+            tableName = "location_logs",
+            isUsageLog = false
+        )
+    }
 
-            UsageTracker.extractUsageEvents(applicationContext, dbHelper)
-            val unsyncedUsage = dbHelper.getUnsyncedUsageLogs()
-            
-            if (unsyncedUsage.isNotEmpty()) {
-                usageSuccess = syncToGist(
-                    gistId = GIST_USAGE_ID, 
-                    fileName = "usage_stats.csv", 
-                    header = "Device,App Name,Date,Start Time,End Time\n", 
-                    logs = unsyncedUsage, 
-                    dbHelper = dbHelper, 
-                    tableName = "usage_logs",
-                    isUsageLog = true 
-                )
-            }
-        }
-        // ADD THESE MISSING LINES BACK IN:
-            // If either failed, tell Android to retry based on the backoff policy
-            if (!notifSuccess || !usageSuccess || !locationSuccess) {
-    return Result.retry()
+    if (!notifSuccess || !usageSuccess || !locationSuccess) {
+        return Result.retry()
+    }
+    return Result.success()
 }
-return Result.success()
-        }
     // ==========================================
 // CHANNEL 3: LOCATION SYNC (every time worker runs)
 // ==========================================
