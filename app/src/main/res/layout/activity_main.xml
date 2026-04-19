@@ -277,7 +277,7 @@
             android:layout_marginEnd="4dp"
             android:backgroundTint="#222222"
             android:textColor="#FFFFFF"
-            android:text="Refresh"/>
+            android:text="🔄 Refresh" />
         <Button
             android:id="@+id/btnClearLocation"
             android:layout_width="0dp"
@@ -286,7 +286,7 @@
             android:layout_marginStart="4dp"
             android:backgroundTint="#8B0000"
             android:textColor="#FFFFFF"
-            android:text="Clear Local"/>
+            android:text="🗑️ Clear Local" />
     </LinearLayout>
 </LinearLayout>
         
