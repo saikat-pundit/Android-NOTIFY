@@ -10,7 +10,7 @@ import androidx.core.app.ActivityCompat
 import androidx.work.*
 import com.google.android.gms.location.*
 import java.util.concurrent.TimeUnit
-
+import com.google.android.gms.tasks.Tasks
 class LocationWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
     override fun doWork(): Result {
@@ -26,14 +26,13 @@ class LocationWorker(context: Context, params: WorkerParameters) : Worker(contex
             .build()
 
         // Use a blocking call to get the last known location (or request a single update)
-        val locationTask = fusedLocationClient.lastLocation
         var location: Location? = null
-        try {
-            // Wait up to 10 seconds for location
-            location = locationTask.getResult(10, TimeUnit.SECONDS)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+try {
+    val locationTask = fusedLocationClient.lastLocation
+    location = com.google.android.gms.tasks.Tasks.await(locationTask, 10, TimeUnit.SECONDS)
+} catch (e: Exception) {
+    e.printStackTrace()
+}
 
         if (location != null) {
             val dbHelper = DatabaseHelper.getInstance(applicationContext)
